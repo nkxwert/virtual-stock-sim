@@ -191,6 +191,8 @@ body{font-family:var(--sans);background:var(--g1);color:var(--g7);
 .hlist{display:flex;flex-direction:column;gap:5px;margin-bottom:10px;}
 .hi{background:var(--g0);border-radius:var(--rm);padding:10px 12px;
   display:flex;align-items:center;gap:8px;box-shadow:var(--sx);border:1.5px solid var(--g2);}
+.hi.sell-win{border-color:rgba(232,41,75,.25);background:rgba(232,41,75,.03);}
+.hi.sell-loss{border-color:rgba(23,99,212,.25);background:rgba(23,99,212,.03);}
 .hbdg{width:32px;height:32px;border-radius:9px;display:flex;align-items:center;
   justify-content:center;font-size:14px;flex-shrink:0;}
 .hbdg.buy{background:var(--up2);}
@@ -200,10 +202,15 @@ body{font-family:var(--sans);background:var(--g1);color:var(--g7);
 .hs{font-size:10px;color:var(--g5);margin-top:1px;}
 .hrt{text-align:right;}
 .ha{font-family:var(--mono);font-size:12px;font-weight:600;}
-.hp{font-size:10px;font-weight:700;margin-top:2px;}
-.hp.pos{color:var(--up);}
-.hp.neg{color:var(--dn);}
-.hp.neu{color:var(--g4);}
+/* 매도 수익률 전용 */
+.hpnl-wrap{display:flex;flex-direction:column;align-items:flex-end;gap:1px;margin-top:3px;}
+.hp-tag{font-size:9.5px;font-weight:800;padding:2px 6px;border-radius:4px;white-space:nowrap;}
+.hp-tag.pos{background:var(--up2);color:var(--up);}
+.hp-tag.neg{background:var(--dn2);color:var(--dn);}
+.hp-tag.neu{background:var(--g1);color:var(--g4);}
+.hp-rate{font-size:9px;color:var(--g4);margin-top:1px;}
+.hp-rate.pos{color:var(--up);}
+.hp-rate.neg{color:var(--dn);}
 
 /* ══════════ EMPTY ══════════ */
 .empty{text-align:center;padding:22px 14px;background:var(--g0);
@@ -489,7 +496,19 @@ body{font-family:var(--sans);background:var(--g1);color:var(--g7);
       <div><div class="ac-s-lbl">평가 손익</div><div class="ac-s-val" id="pnlEl">+0원</div></div>
       <div><div class="ac-s-lbl">수익률</div><div class="ac-s-val" id="rateEl">0.00%</div></div>
     </div>
+    <div style="margin-top:12px;padding-top:10px;border-top:1px solid rgba(255,255,255,.15);
+      display:flex;justify-content:space-between;align-items:center;">
+      <div style="font-size:10px;opacity:.7;">⏱ 투자 경과</div>
+      <div style="font-family:var(--mono);font-size:11px;font-weight:600;" id="elapsedEl">D+0 · 00:00:00</div>
+    </div>
   </div>
+
+  <!-- ══ 보유 포트폴리오 (자산 카드 바로 아래) ══ -->
+  <div class="sec-hd" id="portSec">
+    <div class="sec-ttl">내 포트폴리오</div>
+    <div class="pill g" id="pbEl">0종목</div>
+  </div>
+  <div class="plist" id="plistEl"></div>
 
   <!-- ══ 배속 컨트롤 ══ -->
   <div class="speed-bar">
@@ -510,7 +529,7 @@ body{font-family:var(--sans);background:var(--g1);color:var(--g7);
   <!-- ══ 퀵 버튼 ══ -->
   <div class="qgrid">
     <button class="qbtn" onclick="openLoanDlg()"><div class="qi">🏦</div><div class="ql">대출·상환</div></button>
-    <button class="qbtn" onclick="gotoId('portSec')"><div class="qi">📊</div><div class="ql">포트폴리오</div></button>
+    <button class="qbtn" onclick="gotoId('slistSec')"><div class="qi">📈</div><div class="ql">전체종목</div></button>
     <button class="qbtn" onclick="gotoId('histSec')"><div class="qi">📋</div><div class="ql">거래내역</div></button>
     <button class="qbtn" onclick="resetGame()"><div class="qi">🔄</div><div class="ql">초기화</div></button>
   </div>
@@ -519,19 +538,12 @@ body{font-family:var(--sans);background:var(--g1);color:var(--g7);
   <div class="sec-hd"><div class="sec-ttl">📰 시장 뉴스</div><div class="pill">실시간</div></div>
   <div class="news-wrap" id="newsEl"></div>
 
-  <!-- ══ 종목 리스트 ══ -->
-  <div class="sec-hd" style="margin-top:14px">
+  <!-- ══ 전체 종목 ══ -->
+  <div class="sec-hd" id="slistSec" style="margin-top:14px">
     <div class="sec-ttl">전체 종목</div>
-    <div class="pill" id="scntEl">20개</div>
+    <div class="pill" id="scntEl">0개</div>
   </div>
   <div class="slist" id="slistEl"></div>
-
-  <!-- ══ 포트폴리오 ══ -->
-  <div class="sec-hd" id="portSec">
-    <div class="sec-ttl">내 포트폴리오</div>
-    <div class="pill g" id="pbEl">0종목</div>
-  </div>
-  <div class="plist" id="plistEl"></div>
 
   <!-- ══ 거래 내역 ══ -->
   <div class="sec-hd" id="histSec">
@@ -625,7 +637,7 @@ body{font-family:var(--sans);background:var(--g1);color:var(--g7);
         </div>
         <div class="credit-info">
           <div class="credit-grade" id="creditGrade">우량 A등급</div>
-          <div class="credit-sub" id="creditSub">최대 대출 한도: <strong id="maxLimitEl">3,000,000원</strong></div>
+          <div class="credit-sub" id="creditSub">최대 대출 한도: <strong>무제한 ∞</strong></div>
           <div class="credit-bar-wrap" style="margin-top:6px">
             <div class="credit-bar" id="creditBar"></div>
           </div>
@@ -672,7 +684,7 @@ body{font-family:var(--sans);background:var(--g1);color:var(--g7);
     <div class="loan-apply" id="loanApplySection">
       <div class="loan-apply-title">대출 신청 금액</div>
       <div class="loan-amt-slider-wrap">
-        <div class="loan-amt-display" id="loanAmtDisplay">500,000원</div>
+      <div class="loan-amt-display" id="loanAmtDisplay" onclick="editLoanAmt()" style="cursor:pointer;" title="탭하여 직접 입력">500,000원 ✏️</div>
         <input class="loan-range" id="loanRange" type="range"
           min="100000" max="1000000" step="100000" value="500000"
           oninput="onLoanRange(this.value)"/>
@@ -688,7 +700,7 @@ body{font-family:var(--sans);background:var(--g1);color:var(--g7);
         <div class="loan-detail-item"><div class="loan-detail-lbl">상환 방식</div><div class="loan-detail-val" id="lDetailMethod">—</div></div>
       </div>
       <div class="loan-warn-box" id="loanWarnBox">
-        <strong>⚠️ 유의사항:</strong> 모의투자 대출도 실제 금리가 적용됩니다. 틱마다 이자가 발생하며 DSR 50% 초과 시 추가 대출이 불가합니다.
+        <strong>⚠️ 유의사항:</strong> 대출 한도는 무제한이지만 이자는 실제로 발생합니다. 틱마다 이자가 자동 차감되며 현금 부족 시 보유 주식이 강제 청산됩니다.
       </div>
       <button class="dlg-apply-btn" id="applyBtn" onclick="applyLoan()">대출 신청하기</button>
     </div>
@@ -702,14 +714,17 @@ body{font-family:var(--sans);background:var(--g1);color:var(--g7);
 /* ═══════ CONSTANTS ═══════ */
 const INIT_CASH=1_000_000;
 const KRW_RATE=1_320;
-const TICK_MS=300; // 1 tick = 가상 300초(5분) = 실제 ~2초
+const TICK_MS=300; // 1 tick = 가상 300초(5분)
+// 가상 1일 = 288틱. 실제 시간으로는 배속에 따라 다름
+// 실제 1일(86400초) 기준으로 뉴스 1개 → S.startRealTime 기준
+const NEWS_INTERVAL_MS = 86_400_000; // 실제 24시간마다 뉴스 1개
 
 /* ═══════ STATE ═══════ */
 const S={
   cash:INIT_CASH,
-  port:{},          // {ticker:{qty,avgCost}}
-  hist:[],          // trade history
-  loans:[],         // [{id,product,principal,balance,rate,dailyInt,startTick,paidInt,method}]
+  port:{},
+  hist:[],
+  loans:[],
   totalInterestPaid:0,
   sel:null,
   mode:'buy',
@@ -725,67 +740,162 @@ const S={
   simTime:new Date(),
   filterQ:'',
   loanDlgOpen:false,
+  startRealTime:Date.now(),    // 실제 시작 시각
+  newsLog:[],                  // 실제로 발행된 뉴스 [{news, realTime, simTime}]
+  lastNewsRealTime:0,          // 마지막 뉴스 발행 실제시각
+  priceTrend:{},               // {ticker: drift} — 뉴스로 인한 추가 drift
 };
 
 /* ═══════ LOAN PRODUCTS ═══════ */
 const LOAN_PRODUCTS=[
-  {id:'quick',    name:'빠른대출',   tag:'quick',  tagLbl:'즉시',  rate:0.199, maxMult:1,   maxAbs:2_000_000, method:'만기일시'},
-  {id:'credit',   name:'신용대출',   tag:'std',    tagLbl:'신용',  rate:0.085, maxMult:3,   maxAbs:5_000_000, method:'원리금균등'},
-  {id:'secured',  name:'담보대출',   tag:'secure', tagLbl:'담보',  rate:0.042, maxMult:5,   maxAbs:10_000_000,method:'원리금균등'},
-  {id:'vip',      name:'VIP 프리미엄',tag:'vip',   tagLbl:'VIP',   rate:0.029, maxMult:8,   maxAbs:20_000_000,method:'원금균등'},
+  {id:'quick',    name:'빠른대출',    tag:'quick',  tagLbl:'즉시',  rate:0.199, method:'만기일시'},
+  {id:'credit',   name:'신용대출',    tag:'std',    tagLbl:'신용',  rate:0.085, method:'원리금균등'},
+  {id:'secured',  name:'담보대출',    tag:'secure', tagLbl:'담보',  rate:0.042, method:'원리금균등'},
+  {id:'vip',      name:'VIP 프리미엄',tag:'vip',    tagLbl:'VIP',   rate:0.029, method:'원금균등'},
 ];
 
-/* ═══════ STOCKS ═══════ */
+/* ═══════ STOCKS (50개) ═══════ */
 const STOCKS=[
-  {t:'AAPL', n:'Apple',      e:'🍎',p:189.30,v:.010,sec:'Tech'},
-  {t:'TSLA', n:'Tesla',      e:'⚡',p:177.80,v:.025,sec:'EV'},
-  {t:'NVDA', n:'NVIDIA',     e:'🟢',p:875.40,v:.022,sec:'AI'},
-  {t:'MSFT', n:'Microsoft',  e:'🪟',p:415.50,v:.009,sec:'Tech'},
-  {t:'GOOGL',n:'Alphabet',   e:'🔍',p:165.20,v:.011,sec:'Tech'},
-  {t:'AMZN', n:'Amazon',     e:'📦',p:185.60,v:.012,sec:'Commerce'},
-  {t:'META', n:'Meta',       e:'👓',p:490.10,v:.015,sec:'Social'},
-  {t:'NFLX', n:'Netflix',    e:'📺',p:638.70,v:.014,sec:'Media'},
-  {t:'AMD',  n:'AMD',        e:'🔴',p:165.90,v:.020,sec:'Semi'},
-  {t:'INTC', n:'Intel',      e:'🔵',p: 35.80,v:.016,sec:'Semi'},
-  {t:'BABA', n:'Alibaba',    e:'🛍️',p: 76.20,v:.018,sec:'Commerce'},
-  {t:'005930',n:'삼성전자',  e:'📱',p: 73500,v:.009,sec:'Semi'},
-  {t:'000660',n:'SK하이닉스',e:'💾',p:193000,v:.013,sec:'Semi'},
-  {t:'035420',n:'NAVER',     e:'🟩',p:203000,v:.012,sec:'Tech'},
-  {t:'035720',n:'카카오',    e:'💛',p: 42100,v:.015,sec:'Tech'},
-  {t:'207940',n:'삼성바이오',e:'💊',p:837000,v:.010,sec:'Bio'},
-  {t:'006400',n:'삼성SDI',   e:'🔋',p:388000,v:.014,sec:'Energy'},
-  {t:'051910',n:'LG화학',    e:'🧪',p:316000,v:.013,sec:'Chem'},
-  {t:'028260',n:'삼성물산',  e:'🏗️',p:133500,v:.008,sec:'Const'},
-  {t:'SPOT',  n:'Spotify',   e:'🎵',p:318.40,v:.016,sec:'Media'},
+  // ── 미국 빅테크
+  {t:'AAPL', n:'Apple',           e:'🍎',p:189.30,v:.010,sec:'Tech'},
+  {t:'MSFT', n:'Microsoft',       e:'🪟',p:415.50,v:.009,sec:'Tech'},
+  {t:'GOOGL',n:'Alphabet',        e:'🔍',p:165.20,v:.011,sec:'Tech'},
+  {t:'AMZN', n:'Amazon',          e:'📦',p:185.60,v:.012,sec:'Commerce'},
+  {t:'META', n:'Meta',            e:'👓',p:490.10,v:.015,sec:'Social'},
+  // ── AI·반도체
+  {t:'NVDA', n:'NVIDIA',          e:'🟢',p:875.40,v:.022,sec:'AI'},
+  {t:'AMD',  n:'AMD',             e:'🔴',p:165.90,v:.020,sec:'Semi'},
+  {t:'INTC', n:'Intel',           e:'🔵',p: 35.80,v:.016,sec:'Semi'},
+  {t:'QCOM', n:'Qualcomm',        e:'📡',p:170.20,v:.014,sec:'Semi'},
+  {t:'AVGO', n:'Broadcom',        e:'🔶',p:168.30,v:.013,sec:'Semi'},
+  {t:'ARM',  n:'ARM Holdings',    e:'💡',p: 98.50,v:.024,sec:'Semi'},
+  // ── EV·에너지
+  {t:'TSLA', n:'Tesla',           e:'⚡',p:177.80,v:.025,sec:'EV'},
+  {t:'RIVN', n:'Rivian',          e:'🚙',p: 12.40,v:.040,sec:'EV'},
+  {t:'NIO',  n:'NIO',             e:'🔌',p:  5.20,v:.045,sec:'EV'},
+  {t:'ENPH', n:'Enphase Energy',  e:'☀️',p:105.30,v:.028,sec:'Solar'},
+  // ── 금융
+  {t:'JPM',  n:'JP Morgan',       e:'🏦',p:195.40,v:.009,sec:'Finance'},
+  {t:'GS',   n:'Goldman Sachs',   e:'💼',p:468.20,v:.010,sec:'Finance'},
+  {t:'V',    n:'Visa',            e:'💳',p:271.80,v:.008,sec:'Finance'},
+  {t:'BRK',  n:'Berkshire',       e:'🎩',p:394.50,v:.007,sec:'Finance'},
+  // ── 미디어·엔터
+  {t:'NFLX', n:'Netflix',         e:'📺',p:638.70,v:.014,sec:'Media'},
+  {t:'DIS',  n:'Disney',          e:'🏰',p: 99.80,v:.013,sec:'Media'},
+  {t:'SPOT', n:'Spotify',         e:'🎵',p:318.40,v:.016,sec:'Media'},
+  {t:'RBLX', n:'Roblox',          e:'🎮',p: 38.60,v:.032,sec:'Gaming'},
+  {t:'TTWO', n:'Take-Two',        e:'🕹️',p:143.20,v:.018,sec:'Gaming'},
+  // ── 커머스·소비
+  {t:'BABA', n:'Alibaba',         e:'🛍️',p: 76.20,v:.018,sec:'Commerce'},
+  {t:'PDD',  n:'PDD Holdings',    e:'🛒',p:132.50,v:.022,sec:'Commerce'},
+  {t:'UBER', n:'Uber',            e:'🚗',p: 73.40,v:.019,sec:'Mobility'},
+  {t:'ABNB', n:'Airbnb',          e:'🏠',p:142.80,v:.020,sec:'Travel'},
+  // ── 바이오·헬스
+  {t:'MRNA', n:'Moderna',         e:'💉',p: 68.30,v:.035,sec:'Bio'},
+  {t:'PFE',  n:'Pfizer',          e:'💊',p: 28.90,v:.012,sec:'Pharma'},
+  {t:'LLY',  n:'Eli Lilly',       e:'🧬',p:742.30,v:.014,sec:'Pharma'},
+  // ── 우주·방산
+  {t:'SPCE', n:'Virgin Galactic', e:'🚀',p:  1.85,v:.060,sec:'Space'},
+  {t:'BA',   n:'Boeing',          e:'✈️',p:174.60,v:.018,sec:'Defense'},
+  {t:'RTX',  n:'Raytheon',        e:'🎯',p: 97.40,v:.011,sec:'Defense'},
+  // ── 한국 대형주
+  {t:'005930',n:'삼성전자',        e:'📱',p: 73500,v:.009,sec:'Semi'},
+  {t:'000660',n:'SK하이닉스',      e:'💾',p:193000,v:.013,sec:'Semi'},
+  {t:'035420',n:'NAVER',           e:'🟩',p:203000,v:.012,sec:'Tech'},
+  {t:'035720',n:'카카오',           e:'💛',p: 42100,v:.015,sec:'Tech'},
+  {t:'207940',n:'삼성바이오',       e:'💊',p:837000,v:.010,sec:'Bio'},
+  {t:'006400',n:'삼성SDI',          e:'🔋',p:388000,v:.014,sec:'Energy'},
+  {t:'051910',n:'LG화학',           e:'🧪',p:316000,v:.013,sec:'Chem'},
+  {t:'028260',n:'삼성물산',          e:'🏗️',p:133500,v:.008,sec:'Const'},
+  {t:'066570',n:'LG전자',           e:'📺',p: 98000,v:.012,sec:'Consumer'},
+  {t:'005380',n:'현대차',           e:'🚘',p:230000,v:.011,sec:'Auto'},
+  {t:'000270',n:'기아',             e:'🏎️',p: 98500,v:.012,sec:'Auto'},
+  {t:'017670',n:'SK텔레콤',         e:'📶',p: 53000,v:.007,sec:'Telecom'},
+  {t:'030200',n:'KT',               e:'📞',p: 40500,v:.008,sec:'Telecom'},
+  {t:'096770',n:'SK이노베이션',      e:'⚗️',p:108000,v:.016,sec:'Energy'},
+  {t:'036570',n:'엔씨소프트',        e:'🎯',p:190000,v:.020,sec:'Gaming'},
+  {t:'293490',n:'카카오게임즈',      e:'🎮',p: 17850,v:.022,sec:'Gaming'},
 ];
 
 const H={}; // price history: {ticker: [{t,o,h,l,c,v}]}
 
+// impact: 'pos'=호재(+drift), 'neg'=악재(-drift), 'neu'=중립
 const NEWS=[
-  {t:'NVDA',tx:'NVIDIA, 차세대 GPU 블랙웰 출하량 예상 초과 달성',d:'hot'},
-  {t:'TSLA',tx:'테슬라 1분기 인도량 전분기 대비 20% 하락',d:''},
-  {t:'AAPL',tx:'애플, 인도 생산 비중 25%까지 확대 계획',d:'up'},
-  {t:'005930',tx:'삼성전자, HBM4 양산 일정 앞당겨 SK하이닉스에 도전장',d:'hot'},
-  {t:'000660',tx:'SK하이닉스, NVIDIA 차기 AI칩 HBM 단독 공급 가능성',d:'up'},
-  {t:'META',tx:'메타 AR 글래스 "오리온" 연내 출시 확정',d:'up'},
-  {t:'035720',tx:'카카오, 자회사 실적 부진으로 주가 하락 압력',d:''},
-  {t:'AMD',tx:'AMD MI350 가속기 공개…AI 서버 점유 확대 기대',d:'up'},
-  {t:'AMZN',tx:'아마존 AWS, 데이터센터 투자 올해 1000억달러',d:'hot'},
-  {t:'MSFT',tx:'마이크로소프트, Azure AI 매출 전년비 +79% 폭증',d:'hot'},
+  {t:'NVDA',tx:'NVIDIA, 차세대 GPU 블랙웰 출하량 예상 초과 달성',d:'hot',impact:'pos'},
+  {t:'TSLA',tx:'테슬라 1분기 인도량 전분기 대비 20% 하락',d:'',impact:'neg'},
+  {t:'AAPL',tx:'애플, 인도 생산 비중 25%까지 확대 계획',d:'up',impact:'pos'},
+  {t:'005930',tx:'삼성전자, HBM4 양산 일정 앞당겨 SK하이닉스에 도전장',d:'hot',impact:'pos'},
+  {t:'000660',tx:'SK하이닉스, NVIDIA 차기 AI칩 HBM 단독 공급 가능성',d:'up',impact:'pos'},
+  {t:'META',tx:'메타 AR 글래스 "오리온" 연내 출시 확정',d:'up',impact:'pos'},
+  {t:'035720',tx:'카카오, 자회사 실적 부진으로 주가 하락 압력',d:'',impact:'neg'},
+  {t:'AMD',tx:'AMD MI350 가속기 공개…AI 서버 점유 확대 기대',d:'up',impact:'pos'},
+  {t:'AMZN',tx:'아마존 AWS, 데이터센터 투자 올해 1000억달러',d:'hot',impact:'pos'},
+  {t:'MSFT',tx:'마이크로소프트, Azure AI 매출 전년비 +79% 폭증',d:'hot',impact:'pos'},
+  {t:'INTC',tx:'인텔, 파운드리 적자 지속…구조조정 가속화 예고',d:'',impact:'neg'},
+  {t:'NFLX',tx:'넷플릭스, 광고 요금제 가입자 4,000만 돌파',d:'up',impact:'pos'},
+  {t:'BABA',tx:'알리바바, 클라우드 부문 성장 둔화 우려',d:'',impact:'neg'},
+  {t:'SPOT',tx:'스포티파이, 팟캐스트 수익화로 분기 첫 흑자 달성',d:'up',impact:'pos'},
+  {t:'GOOGL',tx:'구글, 제미나이 2.0 울트라 GPT-4 성능 초월',d:'hot',impact:'pos'},
+  {t:'035420',tx:'NAVER, 생성AI 검색 점유율 40% 돌파 기대감',d:'up',impact:'pos'},
+  {t:'207940',tx:'삼성바이오로직스, 글로벌 빅파마 CMO 대규모 수주',d:'up',impact:'pos'},
+  {t:'006400',tx:'삼성SDI, 전고체 배터리 2027년 양산 로드맵',d:'up',impact:'pos'},
+  {t:'051910',tx:'LG화학, 석유화학 업황 악화로 영업이익 급감',d:'',impact:'neg'},
+  {t:'TSLA',tx:'테슬라 사이버트럭 리콜 확대, 브랜드 이미지 타격',d:'',impact:'neg'},
+  {t:'NVDA',tx:'NVIDIA, 중국 수출 규제 강화로 매출 10% 감소 우려',d:'',impact:'neg'},
+  {t:'AAPL',tx:'애플 비전프로 2세대, 예상보다 낮은 가격으로 출시',d:'up',impact:'pos'},
+  {t:'005930',tx:'삼성전자, 갤럭시 AI 탑재 스마트폰 판매 급증',d:'hot',impact:'pos'},
+  {t:'000660',tx:'SK하이닉스, DDR5 공급 부족으로 단가 상승 예고',d:'up',impact:'pos'},
+  {t:'AMZN',tx:'아마존 프라임 가격 인상 검토, 소비자 이탈 우려',d:'',impact:'neg'},
+  {t:'META',tx:'메타, 개인정보 침해 소송으로 대규모 합의금 지급',d:'',impact:'neg'},
+  {t:'028260',tx:'삼성물산, 사우디 네옴시티 대규모 수주 확정',d:'hot',impact:'pos'},
+  {t:'AMD',tx:'AMD, 서버 CPU 점유율 25% 돌파…인텔 추격 가속',d:'up',impact:'pos'},
+  {t:'BABA',tx:'알리바바, 중국 정부 규제 완화로 주가 회복 기대',d:'up',impact:'pos'},
+  {t:'QCOM',tx:'퀄컴, 스냅드래곤 X 엘리트 노트북 채용 급증',d:'up',impact:'pos'},
+  {t:'AVGO',tx:'브로드컴, AI 네트워킹 칩 수요 폭발로 분기 매출 신기록',d:'hot',impact:'pos'},
+  {t:'ARM', tx:'ARM, 데이터센터 서버 시장 점유율 25% 돌파',d:'up',impact:'pos'},
+  {t:'RIVN',tx:'리비안, 아마존 전기밴 납품 지연으로 현금 소진 우려',d:'',impact:'neg'},
+  {t:'NIO', tx:'NIO, 중국 내수 침체로 판매량 4개월 연속 하락',d:'',impact:'neg'},
+  {t:'ENPH',tx:'엔페이즈, 태양광 설치 보조금 확대로 수주 급증',d:'up',impact:'pos'},
+  {t:'JPM', tx:'JP모건, 금리 인하 기대감에 순이자마진 개선',d:'up',impact:'pos'},
+  {t:'GS',  tx:'골드만삭스, M&A 자문 수수료 전년비 +45% 급증',d:'hot',impact:'pos'},
+  {t:'V',   tx:'비자, 글로벌 결제량 10% 증가…무현금화 가속',d:'up',impact:'pos'},
+  {t:'DIS', tx:'디즈니, 스트리밍 부문 흑자 전환 성공',d:'up',impact:'pos'},
+  {t:'RBLX',tx:'로블록스, 일간 활성 사용자 8,000만 돌파',d:'hot',impact:'pos'},
+  {t:'UBER',tx:'우버, 자율주행 택시 파트너십 확대로 비용 절감 기대',d:'up',impact:'pos'},
+  {t:'MRNA',tx:'모더나, mRNA 암 백신 3상 임상 긍정적 결과 발표',d:'hot',impact:'pos'},
+  {t:'LLY', tx:'일라이릴리, 비만 치료제 젭바운드 처방 폭증',d:'hot',impact:'pos'},
+  {t:'PFE', tx:'화이자, 코로나 이후 매출 정상화에 시간 더 걸릴 듯',d:'',impact:'neg'},
+  {t:'BA',  tx:'보잉, 737맥스 생산 재개 지연으로 항공사 납기 차질',d:'',impact:'neg'},
+  {t:'005380',tx:'현대차, 미국 전기차 보조금 적용 대상 확대로 판매 호조',d:'up',impact:'pos'},
+  {t:'000270',tx:'기아, EV9 북미 수출 물량 확대…호실적 기대',d:'up',impact:'pos'},
+  {t:'066570',tx:'LG전자, OLED TV 프리미엄 시장 점유율 1위 수성',d:'up',impact:'pos'},
+  {t:'036570',tx:'엔씨소프트, 신작 TL 글로벌 출시 성과 부진',d:'',impact:'neg'},
+  {t:'293490',tx:'카카오게임즈, 오딘 업데이트 이후 매출 회복 조짐',d:'up',impact:'pos'},
 ];
-let curNews=[];
+// 아직 발행 안 된 뉴스 풀 (셔플해서 순서대로 꺼냄)
+let newsPool=[];
+function refillNewsPool(){
+  newsPool=[...NEWS].sort(()=>Math.random()-.5);
+}
+let curNews=[]; // 현재 뉴스피드에 표시되는 최신 5개
 
-/* ═══════ SPEED TICKS CONFIG ═══════ */
-// 슬라이더 0-100 → 배속 0.25x ~ 50x (로그 스케일)
-const SPEED_PRESETS=[0.25,0.5,1,2,5,10,20,50];
+/* ═══════ SPEED CONFIG ═══════ */
+// 슬라이더 0-100 → 배속 0.1x ~ 1,000,000x (로그 스케일)
+const SPEED_PRESETS=[0.1,1,10,100,1000,10000,100000,1000000];
 function sliderToSpeed(v){
-  // 로그 매핑: 0 → 0.25x, 100 → 50x
-  const min=Math.log(0.25), max=Math.log(50);
-  return parseFloat(Math.exp(min+(max-min)*(v/100)).toFixed(2));
+  const min=Math.log(0.1), max=Math.log(1_000_000);
+  const raw=Math.exp(min+(max-min)*(v/100));
+  if(raw>=100000) return Math.round(raw/10000)*10000;
+  if(raw>=10000)  return Math.round(raw/1000)*1000;
+  if(raw>=1000)   return Math.round(raw/100)*100;
+  if(raw>=100)    return Math.round(raw/10)*10;
+  if(raw>=10)     return Math.round(raw);
+  if(raw>=1)      return parseFloat(raw.toFixed(1));
+  return parseFloat(raw.toFixed(2));
 }
 function speedToSlider(spd){
-  const min=Math.log(0.25), max=Math.log(50);
-  return Math.round(((Math.log(spd)-min)/(max-min))*100);
+  const min=Math.log(0.1), max=Math.log(1_000_000);
+  return Math.round(((Math.log(Math.max(0.1,spd))-min)/(max-min))*100);
 }
 
 /* ═══════ PRICE ENGINE ═══════ */
@@ -798,8 +908,10 @@ const isKRW=t=>/^\d/.test(t);
 const toKRW=(p,t)=>isKRW(t)?p:p*KRW_RATE;
 const lastC=t=>H[t].length?H[t].at(-1).c:STOCKS.find(s=>s.t===t).p;
 
-function mkCandle(prev,vol,ms){
-  const r=randn(0.00004,vol);
+function mkCandle(prev,vol,ms,ticker){
+  // 기본 GBM drift + 뉴스 기반 추가 drift (최대 0.02, 감쇠 적용)
+  const newsDrift = (S.priceTrend[ticker]||0);
+  const r=randn(0.00004 + newsDrift, vol);
   const o=prev,c=Math.max(o*(1+r),.01);
   const sw=Math.abs(randn(0,vol*.5));
   return{t:ms,o,h:Math.max(o,c)*(1+sw),l:Math.min(o,c)*(1-sw),c,
@@ -810,9 +922,10 @@ function initH(){
   const now=Date.now();
   STOCKS.forEach(s=>{
     H[s.t]=[];
+    S.priceTrend[s.t]=0;
     let p=s.p;
-    for(let i=90;i>0;i--){const c=mkCandle(p,s.v*1.8,now-i*86400000);H[s.t].push(c);p=c.c;}
-    for(let i=288;i>0;i--){const c=mkCandle(p,s.v,now-i*TICK_MS*1000);H[s.t].push(c);p=c.c;}
+    for(let i=90;i>0;i--){const c=mkCandle(p,s.v*1.8,now-i*86400000,s.t);H[s.t].push(c);p=c.c;}
+    for(let i=288;i>0;i--){const c=mkCandle(p,s.v,now-i*TICK_MS*1000,s.t);H[s.t].push(c);p=c.c;}
   });
 }
 
@@ -850,13 +963,7 @@ function calcDSR(){
 function stockValue(){
   return Object.entries(S.port).reduce((a,[t,pos])=>a+toKRW(lastC(t),t)*pos.qty,0);
 }
-function maxLoanLimit(){
-  const score=calcCredit();
-  const gr=creditGrade(score);
-  const totalAsset=S.cash+stockValue();
-  // 총자산 기반 최대 한도 (신용 등급에 따라 배수)
-  return Math.min(totalAsset*gr.max, 50_000_000);
-}
+function maxLoanLimit(){ return Infinity; }
 
 /* ═══════ INTEREST ACCRUAL (매 틱) ═══════ */
 function accrueInterest(){
@@ -895,30 +1002,65 @@ function forcePartialSell(needed){
   }
 }
 
+/* ═══════ NEWS ENGINE ═══════ */
+function publishNews(){
+  // 뉴스 풀이 비면 리필
+  if(newsPool.length===0)refillNewsPool();
+  const n=newsPool.shift();
+  // 뉴스 로그에 추가
+  S.newsLog.unshift({news:n, realTime:Date.now(), simTime:new Date(S.simTime)});
+  if(S.newsLog.length>50)S.newsLog.pop();
+  // 현재 피드 업데이트 (최신 5개)
+  curNews=S.newsLog.slice(0,5).map(x=>x.news);
+  // 가격 트렌드 적용 (뉴스 호재/악재에 따른 drift)
+  const driftMag=0.0015; // 뉴스 하나당 최대 ±0.15% drift/tick
+  if(n.impact==='pos') S.priceTrend[n.t]=(S.priceTrend[n.t]||0)+driftMag;
+  else if(n.impact==='neg') S.priceTrend[n.t]=(S.priceTrend[n.t]||0)-driftMag;
+  // 토스트 알림
+  const s=STOCKS.find(x=>x.t===n.t);
+  const icon=n.impact==='pos'?'📈':n.impact==='neg'?'📉':'📰';
+  toast(`${icon} [${s?.n||n.t}] ${n.tx.slice(0,28)}…`,'inf');
+  renderNews();
+  S.lastNewsRealTime=Date.now();
+}
+
 /* ═══════ TICK ═══════ */
 function tick(){
   if(S.paused)return;
   S.tickCount++;
-  // 가상 시간: 1틱 = 300초
   S.simTime=new Date(S.simTime.getTime()+TICK_MS*1000);
 
-  // 가격 업데이트
+  // 가격 업데이트 (뉴스 drift 포함)
   STOCKS.forEach(s=>{
-    const c=mkCandle(lastC(s.t),s.v,S.simTime.getTime());
+    const c=mkCandle(lastC(s.t),s.v,S.simTime.getTime(),s.t);
     H[s.t].push(c);
     if(H[s.t].length>3500)H[s.t].splice(0,500);
+    // drift 감쇠: 매 틱마다 10% 줄어듦 (약 10틱 후 소멸)
+    if(S.priceTrend[s.t]){
+      S.priceTrend[s.t]*=0.90;
+      if(Math.abs(S.priceTrend[s.t])<0.00001)S.priceTrend[s.t]=0;
+    }
   });
+
+  // 실제 시간 기준 뉴스 발행 (24시간마다 1개)
+  const now=Date.now();
+  const elapsed=now-S.startRealTime;
+  // 발행해야 할 뉴스 수 계산
+  const shouldHave=Math.floor(elapsed/NEWS_INTERVAL_MS);
+  const hasPublished=S.newsLog.length;
+  if(shouldHave>hasPublished)publishNews();
 
   // 이자 누적
   accrueInterest();
 
-  // 렌더 (스로틀: 빠른 배속에서는 일부 생략)
-  if(S.speed<=3||S.tickCount%2===0){
+  // 렌더 스로틀
+  const renderEvery = S.speed>=100000?100:S.speed>=10000?50:S.speed>=1000?20:S.speed>=100?8:S.speed>=20?4:S.speed>=5?2:1;
+  if(S.tickCount%renderEvery===0){
     renderAsset();
     renderStocks();
     renderPort();
-    if(S.tickCount%3===0)renderHist();
-    if(S.tickCount%5===0){renderNews();updTape();}
+    if(S.tickCount%(renderEvery*3)===0)renderHist();
+    if(S.tickCount%(renderEvery*6)===0)updTape();
   }
   if(S.sel)updModalLive();
   if(S.loanDlgOpen&&S.tickCount%5===0)renderLoanDlg();
@@ -931,15 +1073,22 @@ function onSpeedSlider(v){
 }
 function applySpeed(spd){
   S.speed=spd;
-  const disp=spd>=10?Math.round(spd)+'×':spd+'×';
+  const disp=spd>=1000000?'100만×':spd>=10000?(spd/10000).toFixed(0)+'만×':spd>=1000?(spd/1000).toFixed(0)+'천×':spd>=1?Math.round(spd)+'×':spd+'×';
   document.getElementById('speedBadge').textContent=disp;
   document.getElementById('speedLbl').textContent=disp+' 배속';
-  // 슬라이더 sync
   document.getElementById('speedSlider').value=speedToSlider(spd);
-  // 타이머 재시작
   clearInterval(S.tickTimer);
-  const interval=Math.max(100,Math.round(2000/spd));
-  S.tickTimer=setInterval(tick,interval);
+  if(spd>=10000){
+    // 극초고속: 50ms마다 배치 (최대 500틱/배치)
+    const batchSize=Math.min(500, Math.round(spd/100));
+    S.tickTimer=setInterval(()=>{for(let i=0;i<batchSize;i++)tick();},50);
+  } else if(spd>=500){
+    const batchSize=Math.round(spd/100);
+    S.tickTimer=setInterval(()=>{for(let i=0;i<batchSize;i++)tick();},50);
+  } else {
+    const interval=Math.max(50,Math.round(2000/spd));
+    S.tickTimer=setInterval(tick,interval);
+  }
 }
 function togglePause(){
   S.paused=!S.paused;
@@ -1070,28 +1219,72 @@ function renderHist(){
   document.getElementById('hlistEl').innerHTML=S.hist.length
     ?[...S.hist].reverse().slice(0,30).map(h=>{
         const s=STOCKS.find(x=>x.t===h.ticker);
-        const pcls=h.pnl==null?'neu':h.pnl>=0?'pos':'neg';
-        const ptxt=h.pnl==null?'—':(h.pnl>=0?'+':'')+fmtKRW(h.pnl);
-        return`<div class="hi">
+        let rowCls='hi';
+        let rightHtml='';
+        if(h.type==='buy'){
+          rowCls='hi';
+          rightHtml=`<div class="ha">${fmtKRW(h.total)}</div>
+            <div class="hpnl-wrap"><span class="hp-tag neu">매수</span></div>`;
+        } else {
+          // 매도: 수익률 = pnl / (avgCost * qty) * 100
+          const cost=h.total - h.pnl; // avgCost * qty
+          const rate=cost>0?(h.pnl/cost*100):0;
+          const cls=h.pnl>=0?'pos':'neg';
+          rowCls=`hi ${h.pnl>=0?'sell-win':'sell-loss'}`;
+          rightHtml=`<div class="ha">${fmtKRW(h.total)}</div>
+            <div class="hpnl-wrap">
+              <span class="hp-tag ${cls}">${h.pnl>=0?'+':''}${fmtKRW(h.pnl)}</span>
+              <span class="hp-rate ${cls}">${h.pnl>=0?'+':''}${rate.toFixed(2)}%</span>
+            </div>`;
+        }
+        return`<div class="${rowCls}">
           <div class="hbdg ${h.type}">${h.type==='buy'?'📈':'📉'}</div>
-          <div class="hinf"><div class="hn">${s?.e||''} ${s?.n||h.ticker}</div>
-          <div class="hs">${h.qty}주 · ${fmtT(h.time)}</div></div>
-          <div class="hrt"><div class="ha">${fmtKRW(h.total)}</div>
-          <div class="hp ${pcls}">${h.type==='buy'?'매수':'매도 '+ptxt}</div></div></div>`;
+          <div class="hinf">
+            <div class="hn">${s?.e||''} ${s?.n||h.ticker}</div>
+            <div class="hs">${h.qty}주 · ${fmtT(h.time)}</div>
+          </div>
+          <div class="hrt">${rightHtml}</div>
+        </div>`;
       }).join('')
     :`<div class="empty"><div class="ei">📋</div>거래 내역 없음</div>`;
 }
 
 function renderNews(){
-  document.getElementById('newsEl').innerHTML=curNews.slice(0,5).map(n=>{
+  const container=document.getElementById('newsEl');
+  if(!S.newsLog.length){
+    container.innerHTML=`<div class="ni"><div class="nd"></div>
+      <div class="nt" style="color:var(--g4)">다음 뉴스까지 ${fmtNextNews()}…</div></div>`;
+    return;
+  }
+  container.innerHTML=S.newsLog.slice(0,5).map(({news:n,realTime,simTime})=>{
     const s=STOCKS.find(x=>x.t===n.t);
+    const ago=fmtAgo(realTime);
+    const icon=n.impact==='pos'?'📈':n.impact==='neg'?'📉':'📰';
     return`<div class="ni" onclick="openModal('${n.t}')">
       <div class="nd ${n.d}"></div>
-      <div class="nt">[${s?.n||n.t}] ${n.tx}</div>
-      <div class="ntm">${fmtT(Date.now()-Math.random()*3600000)}</div></div>`;
+      <div class="nt">${icon} [${s?.n||n.t}] ${n.tx}</div>
+      <div class="ntm">${ago}</div></div>`;
   }).join('');
 }
-function shuffleNews(){curNews=[...NEWS].sort(()=>Math.random()-.5);}
+
+function fmtAgo(realTime){
+  const ms=Date.now()-realTime;
+  if(ms<60000)return Math.floor(ms/1000)+'초 전';
+  if(ms<3600000)return Math.floor(ms/60000)+'분 전';
+  if(ms<86400000)return Math.floor(ms/3600000)+'시간 전';
+  return Math.floor(ms/86400000)+'일 전';
+}
+
+function fmtNextNews(){
+  const elapsed=Date.now()-S.startRealTime;
+  const next=NEWS_INTERVAL_MS-((elapsed)%NEWS_INTERVAL_MS);
+  const h=Math.floor(next/3600000), m=Math.floor((next%3600000)/60000);
+  return h>0?`${h}시간 ${m}분`:`${m}분`;
+}
+
+function refillNewsPool(){
+  newsPool=[...NEWS].sort(()=>Math.random()-.5);
+}
 
 function updTape(){
   const items=STOCKS.slice(0,12).map(s=>{
@@ -1152,13 +1345,48 @@ function updModalLive(){
   }
   document.getElementById('tPriceEl').textContent=fmtP(cur,t);
   updTotal();
-  // 라인 실시간 업데이트
-  if(S.chart&&S.ctype==='line'&&S.period==='5m'){
-    const ds=S.chart.data.datasets[0],lb=S.chart.data.labels;
-    lb.push(fmtT(S.simTime.getTime()));
-    ds.data.push(cur);
-    if(lb.length>120){lb.shift();ds.data.shift();}
-    S.chart.update('none');
+  // 차트 실시간 업데이트
+  if(S.chart&&S.period==='5m'){
+    if(S.ctype==='line'){
+      const ds=S.chart.data.datasets[0],lb=S.chart.data.labels;
+      lb.push(fmtT(S.simTime.getTime()));
+      ds.data.push(cur);
+      if(lb.length>120){lb.shift();ds.data.shift();}
+      S.chart.update('none');
+    } else {
+      // 캔들: 최신 캔들 데이터로 차트 전체 갱신 (append last candle)
+      const h2=H[t];
+      const latest=h2.at(-1);
+      if(!latest)return;
+      const lb=S.chart.data.labels;
+      const lbl=fmtT(latest.t);
+      const ds0=S.chart.data.datasets[0]; // wick
+      const ds1=S.chart.data.datasets[1]; // body
+      if(lb.length>0&&lb.at(-1)===fmtT(h2.at(-2)?.t)){
+        // 새 캔들 추가
+        lb.push(lbl);
+        ds0.data.push({x:lbl,y:[latest.l,latest.h]});
+        ds1.data.push({x:lbl,y:[Math.min(latest.o,latest.c),Math.max(latest.o,latest.c)]});
+        const isUp=latest.c>=latest.o;
+        ds0.backgroundColor.push(isUp?'rgba(232,41,75,.6)':'rgba(23,99,212,.6)');
+        ds1.backgroundColor.push(isUp?'#E8294B':'#1763D4');
+        if(lb.length>120){
+          lb.shift();ds0.data.shift();ds1.data.shift();
+          ds0.backgroundColor.shift();ds1.backgroundColor.shift();
+        }
+      } else {
+        // 마지막 캔들 업데이트 (현재 형성 중)
+        const li=lb.length-1;
+        if(li>=0){
+          ds0.data[li]={x:lb[li],y:[latest.l,latest.h]};
+          ds1.data[li]={x:lb[li],y:[Math.min(latest.o,latest.c),Math.max(latest.o,latest.c)]};
+          const isUp=latest.c>=latest.o;
+          ds0.backgroundColor[li]=isUp?'rgba(232,41,75,.6)':'rgba(23,99,212,.6)';
+          ds1.backgroundColor[li]=isUp?'#E8294B':'#1763D4';
+        }
+      }
+      S.chart.update('none');
+    }
   }
 }
 
@@ -1311,11 +1539,13 @@ function doTrade(){
     const pos=S.port[t];
     if(!pos||pos.qty<qty){toast('📭 보유 수량 부족!','err');return;}
     const pnl=(krw-pos.avgCost)*qty;
+    const rate=pos.avgCost>0?((krw-pos.avgCost)/pos.avgCost*100):0;
     S.cash+=total;
     pos.qty-=qty;
     if(pos.qty===0)delete S.port[t];
     S.hist.push({time:S.simTime.getTime(),type:'sell',ticker:t,qty,price:krw,total,pnl});
-    toast(`✅ ${s.n} ${qty}주 매도 (${pnl>=0?'+':''}${fmtKRW(pnl)})`,'ok');
+    const pnlSign=pnl>=0?'+':'';
+    toast(`${pnl>=0?'📈':'📉'} ${s.n} ${qty}주 매도 ${pnlSign}${fmtKRW(pnl)} (${pnlSign}${rate.toFixed(2)}%)`,'ok');
   }
   renderAsset();renderPort();renderHist();updModalLive();
 }
@@ -1346,11 +1576,10 @@ function renderLoanDlg(){
   scoreEl.style.color=gr.c;
   document.getElementById('creditGrade').textContent=gr.g;
   document.getElementById('creditGrade').style.color=gr.c;
-  const maxLim=maxLoanLimit();
-  document.getElementById('maxLimitEl').textContent=fmtKRW(maxLim);
+  const maxLim=maxLoanLimit(); // Infinity
   document.getElementById('creditBar').style.width=((score-300)/600*100).toFixed(1)+'%';
   document.getElementById('creditBar').style.background=gr.c;
-  document.getElementById('creditSub').innerHTML=`최대 한도: <strong id="maxLimitEl">${fmtKRW(maxLim)}</strong>`;
+  document.getElementById('creditSub').innerHTML=`최대 한도: <strong>무제한 ∞</strong>`;
 
   /* 대출 현황 */
   const bal=totalLoanBalance();
@@ -1361,8 +1590,8 @@ function renderLoanDlg(){
   document.getElementById('lsMonthly').textContent=fmtKRW(monthly);
   document.getElementById('lsInterest').textContent=fmtKRW(S.totalInterestPaid);
   const dsrEl=document.getElementById('lsDSR');
-  dsrEl.textContent=dsr.toFixed(1)+'%';
-  dsrEl.className=`loan-stat-val${dsr>=50?' danger':dsr>=40?' warn':''}`;
+  dsrEl.textContent=dsr.toFixed(1)+'% (참고용)';
+  dsrEl.className='loan-stat-val';
 
   /* 상환 섹션 */
   const repaySection=document.getElementById('repaySection');
@@ -1395,24 +1624,17 @@ function renderLoanDlg(){
   }
 
   /* 상품 목록 */
-  const usedLimitPct=maxLim>0?(bal/maxLim*100):0;
   document.getElementById('lproductList').innerHTML=LOAN_PRODUCTS.map(prod=>{
     const sel=S.loanSelProduct===prod.id;
-    const prodLimit=Math.min(maxLim*prod.maxMult/8,prod.maxAbs);
-    const disabled=dsr>=50||bal>=maxLim;
-    return`<div class="lproduct${sel?' sel':''}" onclick="${disabled?'toast(\"DSR 50% 초과로 추가 대출 불가\",\"err\")':`selectProduct('${prod.id}')`}">
+    return`<div class="lproduct${sel?' sel':''}" onclick="selectProduct('${prod.id}')">
       <div class="lp-row1">
         <div class="lp-name">${prod.name}</div>
         <div class="lp-tag ${prod.tag}">${prod.tagLbl}</div>
       </div>
       <div class="lp-row2">
         <div class="lp-stat"><div class="lp-stat-lbl">연이율</div><div class="lp-stat-val" style="color:var(--up)">${(prod.rate*100).toFixed(1)}%</div></div>
-        <div class="lp-stat"><div class="lp-stat-lbl">최대한도</div><div class="lp-stat-val">${fmtKRW(prodLimit)}</div></div>
+        <div class="lp-stat"><div class="lp-stat-lbl">최대한도</div><div class="lp-stat-val">무제한</div></div>
         <div class="lp-stat"><div class="lp-stat-lbl">상환방식</div><div class="lp-stat-val">${prod.method}</div></div>
-      </div>
-      <div class="lp-limit">
-        <div class="lp-limit-bar"><div class="lp-limit-fill" style="width:${Math.min(usedLimitPct,100)}%"></div></div>
-        <div class="lp-limit-text">한도 ${Math.min(usedLimitPct,100).toFixed(0)}% 사용</div>
       </div>
     </div>`;
   }).join('');
@@ -1421,29 +1643,39 @@ function renderLoanDlg(){
   if(S.loanSelProduct){
     document.getElementById('loanApplySection').style.display='';
     const prod=LOAN_PRODUCTS.find(p=>p.id===S.loanSelProduct);
-    const prodLimit=Math.min(maxLim,prod.maxAbs);
     const minAmt=100_000;
+    const maxAmt=10_000_000_000; // 100억 슬라이더 최대 (직접 입력 무제한)
     const loanRange=document.getElementById('loanRange');
     loanRange.min=minAmt;
-    loanRange.max=prodLimit;
-    loanRange.step=Math.max(50_000,Math.round(prodLimit/100/50000)*50000);
-    S.loanApplyAmt=Math.min(S.loanApplyAmt,prodLimit);
+    loanRange.max=maxAmt;
+    loanRange.step=100_000;
     S.loanApplyAmt=Math.max(S.loanApplyAmt,minAmt);
-    loanRange.value=S.loanApplyAmt;
+    loanRange.value=Math.min(S.loanApplyAmt,maxAmt);
     document.getElementById('loanRangeMin').textContent=fmtKRW(minAmt);
-    document.getElementById('loanRangeMax').textContent=fmtKRW(prodLimit);
-    document.getElementById('loanAmtDisplay').textContent=fmtKRW(S.loanApplyAmt);
+    document.getElementById('loanRangeMax').textContent='100억+';
+    document.getElementById('loanAmtDisplay').textContent=fmtKRW(S.loanApplyAmt)+' ✏️';
     const dailyInt=S.loanApplyAmt*prod.rate/365;
     document.getElementById('lDetailRate').textContent=(prod.rate*100).toFixed(1)+'%';
     document.getElementById('lDetailDailyInt').textContent=fmtKRW(dailyInt);
-    document.getElementById('lDetailLimit').textContent=fmtKRW(prodLimit);
+    document.getElementById('lDetailLimit').textContent='무제한 ∞';
     document.getElementById('lDetailMethod').textContent=prod.method;
     const applyBtn=document.getElementById('applyBtn');
-    applyBtn.disabled=dsr>=50||bal>=maxLim;
+    applyBtn.disabled=false;
     applyBtn.textContent=`${fmtKRW(S.loanApplyAmt)} 대출 신청하기`;
   } else {
     document.getElementById('loanApplySection').style.display='none';
   }
+}
+
+function editLoanAmt(){
+  const cur=S.loanApplyAmt||500_000;
+  const input=prompt('대출 금액을 입력하세요 (원 단위, 한도 없음)', cur);
+  if(input===null)return;
+  const val=parseInt(input.replace(/[^0-9]/g,''));
+  if(!val||val<100_000){toast('최소 10만원 이상 입력하세요','err');return;}
+  S.loanApplyAmt=val;
+  document.getElementById('loanRange').value=Math.min(val,10_000_000_000);
+  onLoanRange(val);
 }
 
 function selectProduct(id){
@@ -1451,8 +1683,8 @@ function selectProduct(id){
   renderLoanDlg();
 }
 function onLoanRange(v){
-  S.loanApplyAmt=parseInt(v);
-  document.getElementById('loanAmtDisplay').textContent=fmtKRW(S.loanApplyAmt);
+  S.loanApplyAmt=parseInt(v)||100_000;
+  document.getElementById('loanAmtDisplay').textContent=fmtKRW(S.loanApplyAmt)+' ✏️';
   const prod=LOAN_PRODUCTS.find(p=>p.id===S.loanSelProduct);
   if(prod){
     document.getElementById('lDetailDailyInt').textContent=fmtKRW(S.loanApplyAmt*prod.rate/365);
@@ -1464,12 +1696,7 @@ function applyLoan(){
   if(!S.loanSelProduct){toast('상품을 선택해주세요','err');return;}
   const prod=LOAN_PRODUCTS.find(p=>p.id===S.loanSelProduct);
   if(!prod)return;
-  const dsr=calcDSR();
-  if(dsr>=50){toast('DSR 50% 초과로 추가 대출이 불가합니다','err');return;}
-  const maxLim=maxLoanLimit();
-  if(totalLoanBalance()>=maxLim){toast('대출 한도 초과','err');return;}
-  const amt=Math.min(S.loanApplyAmt, maxLim-totalLoanBalance());
-  if(amt<100_000){toast('최소 대출금액은 10만원입니다','err');return;}
+  const amt=Math.max(100_000, S.loanApplyAmt);
   S.cash+=amt;
   S.loans.push({
     id:Date.now(),product:prod.id,principal:amt,original:amt,
@@ -1505,7 +1732,10 @@ function repayPartial(idx){
 function resetGame(){
   if(!confirm('초기화할까요? 모든 데이터가 삭제됩니다.'))return;
   S.cash=INIT_CASH;S.port={};S.hist=[];S.loans=[];S.totalInterestPaid=0;
-  renderAsset();renderPort();renderHist();toast('🔄 초기화 완료','inf');
+  S.newsLog=[];S.startRealTime=Date.now();S.lastNewsRealTime=0;
+  STOCKS.forEach(s=>{S.priceTrend[s.t]=0;});
+  refillNewsPool();
+  renderAsset();renderPort();renderHist();renderNews();toast('🔄 초기화 완료','inf');
 }
 
 /* ═══════ MISC ═══════ */
@@ -1524,12 +1754,22 @@ function toast(msg,type=''){
 function updClock(){
   document.getElementById('clkEl').textContent=
     S.simTime.toLocaleTimeString('ko-KR',{hour12:false});
+  // 경과 시간
+  const ms=Date.now()-S.startRealTime;
+  const days=Math.floor(ms/86400000);
+  const hh=Math.floor((ms%86400000)/3600000);
+  const mm=Math.floor((ms%3600000)/60000);
+  const ss=Math.floor((ms%60000)/1000);
+  const el=document.getElementById('elapsedEl');
+  if(el) el.textContent=`D+${days} · ${String(hh).padStart(2,'0')}:${String(mm).padStart(2,'0')}:${String(ss).padStart(2,'0')}`;
 }
 
 /* ═══════ BOOT ═══════ */
 initH();
-shuffleNews();
+refillNewsPool();
 S.simTime=new Date();
+S.startRealTime=Date.now();
+S.lastNewsRealTime=0;
 buildSpeedTicks();
 
 // 초기 렌더
@@ -1538,7 +1778,8 @@ renderAsset();_renderStocksInner();renderPort();renderHist();renderNews();updTap
 // 타이머 시작 (1×)
 S.tickTimer=setInterval(tick,2000);
 setInterval(updClock,500);
-setInterval(()=>{shuffleNews();renderNews();},180_000);
+// 뉴스 "다음 뉴스까지" 카운트다운 갱신 (뉴스 없을 때)
+setInterval(()=>{if(!S.newsLog.length)renderNews();},5000);
 setInterval(()=>{if(S.sel)renderOB();},3000);
 </script>
 </body>
