@@ -625,7 +625,7 @@ body{font-family:var(--sans);background:var(--g1);color:var(--g7);
         </div>
         <div class="credit-info">
           <div class="credit-grade" id="creditGrade">우량 A등급</div>
-          <div class="credit-sub" id="creditSub">최대 대출 한도: <strong>무제한 ∞</strong></div>
+          <div class="credit-sub" id="creditSub">최대 대출 한도: <strong id="maxLimitEl">3,000,000원</strong></div>
           <div class="credit-bar-wrap" style="margin-top:6px">
             <div class="credit-bar" id="creditBar"></div>
           </div>
@@ -672,7 +672,7 @@ body{font-family:var(--sans);background:var(--g1);color:var(--g7);
     <div class="loan-apply" id="loanApplySection">
       <div class="loan-apply-title">대출 신청 금액</div>
       <div class="loan-amt-slider-wrap">
-      <div class="loan-amt-display" id="loanAmtDisplay" onclick="editLoanAmt()" style="cursor:pointer;" title="탭하여 직접 입력">500,000원 ✏️</div>
+        <div class="loan-amt-display" id="loanAmtDisplay">500,000원</div>
         <input class="loan-range" id="loanRange" type="range"
           min="100000" max="1000000" step="100000" value="500000"
           oninput="onLoanRange(this.value)"/>
@@ -688,7 +688,7 @@ body{font-family:var(--sans);background:var(--g1);color:var(--g7);
         <div class="loan-detail-item"><div class="loan-detail-lbl">상환 방식</div><div class="loan-detail-val" id="lDetailMethod">—</div></div>
       </div>
       <div class="loan-warn-box" id="loanWarnBox">
-        <strong>⚠️ 유의사항:</strong> 대출 한도는 무제한이지만 이자는 실제로 발생합니다. 틱마다 이자가 자동 차감되며 현금 부족 시 보유 주식이 강제 청산됩니다.
+        <strong>⚠️ 유의사항:</strong> 모의투자 대출도 실제 금리가 적용됩니다. 틱마다 이자가 발생하며 DSR 50% 초과 시 추가 대출이 불가합니다.
       </div>
       <button class="dlg-apply-btn" id="applyBtn" onclick="applyLoan()">대출 신청하기</button>
     </div>
@@ -729,10 +729,10 @@ const S={
 
 /* ═══════ LOAN PRODUCTS ═══════ */
 const LOAN_PRODUCTS=[
-  {id:'quick',    name:'빠른대출',    tag:'quick',  tagLbl:'즉시',  rate:0.199, method:'만기일시'},
-  {id:'credit',   name:'신용대출',    tag:'std',    tagLbl:'신용',  rate:0.085, method:'원리금균등'},
-  {id:'secured',  name:'담보대출',    tag:'secure', tagLbl:'담보',  rate:0.042, method:'원리금균등'},
-  {id:'vip',      name:'VIP 프리미엄',tag:'vip',    tagLbl:'VIP',   rate:0.029, method:'원금균등'},
+  {id:'quick',    name:'빠른대출',   tag:'quick',  tagLbl:'즉시',  rate:0.199, maxMult:1,   maxAbs:2_000_000, method:'만기일시'},
+  {id:'credit',   name:'신용대출',   tag:'std',    tagLbl:'신용',  rate:0.085, maxMult:3,   maxAbs:5_000_000, method:'원리금균등'},
+  {id:'secured',  name:'담보대출',   tag:'secure', tagLbl:'담보',  rate:0.042, maxMult:5,   maxAbs:10_000_000,method:'원리금균등'},
+  {id:'vip',      name:'VIP 프리미엄',tag:'vip',   tagLbl:'VIP',   rate:0.029, maxMult:8,   maxAbs:20_000_000,method:'원금균등'},
 ];
 
 /* ═══════ STOCKS ═══════ */
@@ -776,21 +776,16 @@ const NEWS=[
 let curNews=[];
 
 /* ═══════ SPEED TICKS CONFIG ═══════ */
-// 슬라이더 0-100 → 배속 0.1x ~ 5000x (로그 스케일)
-const SPEED_PRESETS=[0.1,0.5,1,5,20,100,500,5000];
+// 슬라이더 0-100 → 배속 0.25x ~ 50x (로그 스케일)
+const SPEED_PRESETS=[0.25,0.5,1,2,5,10,20,50];
 function sliderToSpeed(v){
-  // 로그 매핑: 0 → 0.1x, 100 → 5000x
-  const min=Math.log(0.1), max=Math.log(5000);
-  const raw=Math.exp(min+(max-min)*(v/100));
-  // 깔끔한 숫자로 반올림
-  if(raw>=100) return Math.round(raw/10)*10;
-  if(raw>=10)  return Math.round(raw);
-  if(raw>=1)   return parseFloat(raw.toFixed(1));
-  return parseFloat(raw.toFixed(2));
+  // 로그 매핑: 0 → 0.25x, 100 → 50x
+  const min=Math.log(0.25), max=Math.log(50);
+  return parseFloat(Math.exp(min+(max-min)*(v/100)).toFixed(2));
 }
 function speedToSlider(spd){
-  const min=Math.log(0.1), max=Math.log(5000);
-  return Math.round(((Math.log(Math.max(0.1,spd))-min)/(max-min))*100);
+  const min=Math.log(0.25), max=Math.log(50);
+  return Math.round(((Math.log(spd)-min)/(max-min))*100);
 }
 
 /* ═══════ PRICE ENGINE ═══════ */
@@ -855,7 +850,13 @@ function calcDSR(){
 function stockValue(){
   return Object.entries(S.port).reduce((a,[t,pos])=>a+toKRW(lastC(t),t)*pos.qty,0);
 }
-function maxLoanLimit(){ return Infinity; }
+function maxLoanLimit(){
+  const score=calcCredit();
+  const gr=creditGrade(score);
+  const totalAsset=S.cash+stockValue();
+  // 총자산 기반 최대 한도 (신용 등급에 따라 배수)
+  return Math.min(totalAsset*gr.max, 50_000_000);
+}
 
 /* ═══════ INTEREST ACCRUAL (매 틱) ═══════ */
 function accrueInterest(){
@@ -912,13 +913,12 @@ function tick(){
   accrueInterest();
 
   // 렌더 (스로틀: 빠른 배속에서는 일부 생략)
-  const renderEvery = S.speed>=500 ? 20 : S.speed>=50 ? 5 : S.speed>=10 ? 3 : S.speed>=3 ? 2 : 1;
-  if(S.tickCount%renderEvery===0){
+  if(S.speed<=3||S.tickCount%2===0){
     renderAsset();
     renderStocks();
     renderPort();
-    if(S.tickCount%(renderEvery*2)===0)renderHist();
-    if(S.tickCount%(renderEvery*4)===0){renderNews();updTape();}
+    if(S.tickCount%3===0)renderHist();
+    if(S.tickCount%5===0){renderNews();updTape();}
   }
   if(S.sel)updModalLive();
   if(S.loanDlgOpen&&S.tickCount%5===0)renderLoanDlg();
@@ -931,21 +931,15 @@ function onSpeedSlider(v){
 }
 function applySpeed(spd){
   S.speed=spd;
-  const disp=spd>=1?Math.round(spd)+'×':spd+'×';
+  const disp=spd>=10?Math.round(spd)+'×':spd+'×';
   document.getElementById('speedBadge').textContent=disp;
   document.getElementById('speedLbl').textContent=disp+' 배속';
+  // 슬라이더 sync
   document.getElementById('speedSlider').value=speedToSlider(spd);
+  // 타이머 재시작
   clearInterval(S.tickTimer);
-  // 500× 이상: 틱을 배치로 묶어 처리 (인터벌 간격 유지하되 틱 여러 번)
-  if(spd>=500){
-    const batchSize=Math.round(spd/100);
-    S.tickTimer=setInterval(()=>{
-      for(let i=0;i<batchSize;i++) tick();
-    },50);
-  } else {
-    const interval=Math.max(50,Math.round(2000/spd));
-    S.tickTimer=setInterval(tick,interval);
-  }
+  const interval=Math.max(100,Math.round(2000/spd));
+  S.tickTimer=setInterval(tick,interval);
 }
 function togglePause(){
   S.paused=!S.paused;
@@ -1352,10 +1346,11 @@ function renderLoanDlg(){
   scoreEl.style.color=gr.c;
   document.getElementById('creditGrade').textContent=gr.g;
   document.getElementById('creditGrade').style.color=gr.c;
-  const maxLim=maxLoanLimit(); // Infinity
+  const maxLim=maxLoanLimit();
+  document.getElementById('maxLimitEl').textContent=fmtKRW(maxLim);
   document.getElementById('creditBar').style.width=((score-300)/600*100).toFixed(1)+'%';
   document.getElementById('creditBar').style.background=gr.c;
-  document.getElementById('creditSub').innerHTML=`최대 한도: <strong>무제한 ∞</strong>`;
+  document.getElementById('creditSub').innerHTML=`최대 한도: <strong id="maxLimitEl">${fmtKRW(maxLim)}</strong>`;
 
   /* 대출 현황 */
   const bal=totalLoanBalance();
@@ -1366,8 +1361,8 @@ function renderLoanDlg(){
   document.getElementById('lsMonthly').textContent=fmtKRW(monthly);
   document.getElementById('lsInterest').textContent=fmtKRW(S.totalInterestPaid);
   const dsrEl=document.getElementById('lsDSR');
-  dsrEl.textContent=dsr.toFixed(1)+'% (참고용)';
-  dsrEl.className='loan-stat-val';
+  dsrEl.textContent=dsr.toFixed(1)+'%';
+  dsrEl.className=`loan-stat-val${dsr>=50?' danger':dsr>=40?' warn':''}`;
 
   /* 상환 섹션 */
   const repaySection=document.getElementById('repaySection');
@@ -1400,17 +1395,24 @@ function renderLoanDlg(){
   }
 
   /* 상품 목록 */
+  const usedLimitPct=maxLim>0?(bal/maxLim*100):0;
   document.getElementById('lproductList').innerHTML=LOAN_PRODUCTS.map(prod=>{
     const sel=S.loanSelProduct===prod.id;
-    return`<div class="lproduct${sel?' sel':''}" onclick="selectProduct('${prod.id}')">
+    const prodLimit=Math.min(maxLim*prod.maxMult/8,prod.maxAbs);
+    const disabled=dsr>=50||bal>=maxLim;
+    return`<div class="lproduct${sel?' sel':''}" onclick="${disabled?'toast(\"DSR 50% 초과로 추가 대출 불가\",\"err\")':`selectProduct('${prod.id}')`}">
       <div class="lp-row1">
         <div class="lp-name">${prod.name}</div>
         <div class="lp-tag ${prod.tag}">${prod.tagLbl}</div>
       </div>
       <div class="lp-row2">
         <div class="lp-stat"><div class="lp-stat-lbl">연이율</div><div class="lp-stat-val" style="color:var(--up)">${(prod.rate*100).toFixed(1)}%</div></div>
-        <div class="lp-stat"><div class="lp-stat-lbl">최대한도</div><div class="lp-stat-val">무제한</div></div>
+        <div class="lp-stat"><div class="lp-stat-lbl">최대한도</div><div class="lp-stat-val">${fmtKRW(prodLimit)}</div></div>
         <div class="lp-stat"><div class="lp-stat-lbl">상환방식</div><div class="lp-stat-val">${prod.method}</div></div>
+      </div>
+      <div class="lp-limit">
+        <div class="lp-limit-bar"><div class="lp-limit-fill" style="width:${Math.min(usedLimitPct,100)}%"></div></div>
+        <div class="lp-limit-text">한도 ${Math.min(usedLimitPct,100).toFixed(0)}% 사용</div>
       </div>
     </div>`;
   }).join('');
@@ -1419,39 +1421,29 @@ function renderLoanDlg(){
   if(S.loanSelProduct){
     document.getElementById('loanApplySection').style.display='';
     const prod=LOAN_PRODUCTS.find(p=>p.id===S.loanSelProduct);
+    const prodLimit=Math.min(maxLim,prod.maxAbs);
     const minAmt=100_000;
-    const maxAmt=10_000_000_000; // 100억 슬라이더 최대 (직접 입력 무제한)
     const loanRange=document.getElementById('loanRange');
     loanRange.min=minAmt;
-    loanRange.max=maxAmt;
-    loanRange.step=100_000;
+    loanRange.max=prodLimit;
+    loanRange.step=Math.max(50_000,Math.round(prodLimit/100/50000)*50000);
+    S.loanApplyAmt=Math.min(S.loanApplyAmt,prodLimit);
     S.loanApplyAmt=Math.max(S.loanApplyAmt,minAmt);
-    loanRange.value=Math.min(S.loanApplyAmt,maxAmt);
+    loanRange.value=S.loanApplyAmt;
     document.getElementById('loanRangeMin').textContent=fmtKRW(minAmt);
-    document.getElementById('loanRangeMax').textContent='100억+';
-    document.getElementById('loanAmtDisplay').textContent=fmtKRW(S.loanApplyAmt)+' ✏️';
+    document.getElementById('loanRangeMax').textContent=fmtKRW(prodLimit);
+    document.getElementById('loanAmtDisplay').textContent=fmtKRW(S.loanApplyAmt);
     const dailyInt=S.loanApplyAmt*prod.rate/365;
     document.getElementById('lDetailRate').textContent=(prod.rate*100).toFixed(1)+'%';
     document.getElementById('lDetailDailyInt').textContent=fmtKRW(dailyInt);
-    document.getElementById('lDetailLimit').textContent='무제한 ∞';
+    document.getElementById('lDetailLimit').textContent=fmtKRW(prodLimit);
     document.getElementById('lDetailMethod').textContent=prod.method;
     const applyBtn=document.getElementById('applyBtn');
-    applyBtn.disabled=false;
+    applyBtn.disabled=dsr>=50||bal>=maxLim;
     applyBtn.textContent=`${fmtKRW(S.loanApplyAmt)} 대출 신청하기`;
   } else {
     document.getElementById('loanApplySection').style.display='none';
   }
-}
-
-function editLoanAmt(){
-  const cur=S.loanApplyAmt||500_000;
-  const input=prompt('대출 금액을 입력하세요 (원 단위, 한도 없음)', cur);
-  if(input===null)return;
-  const val=parseInt(input.replace(/[^0-9]/g,''));
-  if(!val||val<100_000){toast('최소 10만원 이상 입력하세요','err');return;}
-  S.loanApplyAmt=val;
-  document.getElementById('loanRange').value=Math.min(val,10_000_000_000);
-  onLoanRange(val);
 }
 
 function selectProduct(id){
@@ -1459,8 +1451,8 @@ function selectProduct(id){
   renderLoanDlg();
 }
 function onLoanRange(v){
-  S.loanApplyAmt=parseInt(v)||100_000;
-  document.getElementById('loanAmtDisplay').textContent=fmtKRW(S.loanApplyAmt)+' ✏️';
+  S.loanApplyAmt=parseInt(v);
+  document.getElementById('loanAmtDisplay').textContent=fmtKRW(S.loanApplyAmt);
   const prod=LOAN_PRODUCTS.find(p=>p.id===S.loanSelProduct);
   if(prod){
     document.getElementById('lDetailDailyInt').textContent=fmtKRW(S.loanApplyAmt*prod.rate/365);
@@ -1472,7 +1464,12 @@ function applyLoan(){
   if(!S.loanSelProduct){toast('상품을 선택해주세요','err');return;}
   const prod=LOAN_PRODUCTS.find(p=>p.id===S.loanSelProduct);
   if(!prod)return;
-  const amt=Math.max(100_000, S.loanApplyAmt);
+  const dsr=calcDSR();
+  if(dsr>=50){toast('DSR 50% 초과로 추가 대출이 불가합니다','err');return;}
+  const maxLim=maxLoanLimit();
+  if(totalLoanBalance()>=maxLim){toast('대출 한도 초과','err');return;}
+  const amt=Math.min(S.loanApplyAmt, maxLim-totalLoanBalance());
+  if(amt<100_000){toast('최소 대출금액은 10만원입니다','err');return;}
   S.cash+=amt;
   S.loans.push({
     id:Date.now(),product:prod.id,principal:amt,original:amt,
