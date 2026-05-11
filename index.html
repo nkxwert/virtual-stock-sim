@@ -496,10 +496,15 @@ body{font-family:var(--sans);background:var(--g1);color:var(--g7);
       <div><div class="ac-s-lbl">평가 손익</div><div class="ac-s-val" id="pnlEl">+0원</div></div>
       <div><div class="ac-s-lbl">수익률</div><div class="ac-s-val" id="rateEl">0.00%</div></div>
     </div>
-    <div style="margin-top:12px;padding-top:10px;border-top:1px solid rgba(255,255,255,.15);
-      display:flex;justify-content:space-between;align-items:center;">
-      <div style="font-size:10px;opacity:.7;">⏱ 투자 경과</div>
-      <div style="font-family:var(--mono);font-size:11px;font-weight:600;" id="elapsedEl">D+0 · 00:00:00</div>
+    <div style="margin-top:12px;padding-top:10px;border-top:1px solid rgba(255,255,255,.15);">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+        <div style="font-size:9.5px;opacity:.65;">⏱ 실제 경과</div>
+        <div style="font-family:var(--mono);font-size:11px;font-weight:600;" id="realElapsedEl">00:00:00</div>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <div style="font-size:9.5px;opacity:.65;">🚀 가상 경과</div>
+        <div style="font-family:var(--mono);font-size:11px;font-weight:600;color:#93C5FD;" id="virtElapsedEl">0분</div>
+      </div>
     </div>
   </div>
 
@@ -815,6 +820,35 @@ const STOCKS=[
   {t:'096770',n:'SK이노베이션',      e:'⚗️',p:108000,v:.016,sec:'Energy'},
   {t:'036570',n:'엔씨소프트',        e:'🎯',p:190000,v:.020,sec:'Gaming'},
   {t:'293490',n:'카카오게임즈',      e:'🎮',p: 17850,v:.022,sec:'Gaming'},
+  // ── 추가 미국주
+  {t:'CRM',  n:'Salesforce',        e:'☁️',p:270.10,v:.014,sec:'SaaS'},
+  {t:'SNOW', n:'Snowflake',         e:'❄️',p:157.40,v:.028,sec:'SaaS'},
+  {t:'PLTR', n:'Palantir',          e:'🔮',p: 24.80,v:.038,sec:'AI'},
+  {t:'AI',   n:'C3.ai',             e:'🤖',p: 28.50,v:.042,sec:'AI'},
+  {t:'IONQ', n:'IonQ',              e:'⚛️',p: 12.30,v:.055,sec:'Quantum'},
+  {t:'COIN', n:'Coinbase',          e:'🪙',p:218.60,v:.045,sec:'Crypto'},
+  {t:'HOOD', n:'Robinhood',         e:'🏹',p: 18.40,v:.040,sec:'Finance'},
+  {t:'SQ',   n:'Block (Square)',    e:'🟫',p: 72.30,v:.028,sec:'Fintech'},
+  {t:'PYPL', n:'PayPal',            e:'💰',p: 63.50,v:.016,sec:'Fintech'},
+  {t:'SHOP', n:'Shopify',           e:'🛒',p: 73.80,v:.022,sec:'Commerce'},
+  {t:'ZM',   n:'Zoom',              e:'📹',p: 65.40,v:.020,sec:'SaaS'},
+  {t:'DDOG', n:'Datadog',           e:'🐶',p:127.50,v:.024,sec:'SaaS'},
+  {t:'MDB',  n:'MongoDB',           e:'🍃',p:376.20,v:.026,sec:'SaaS'},
+  {t:'NET',  n:'Cloudflare',        e:'🌐',p: 80.60,v:.022,sec:'SaaS'},
+  {t:'PATH', n:'UiPath',            e:'🤝',p: 14.70,v:.030,sec:'AI'},
+  {t:'LYFT', n:'Lyft',              e:'🚕',p: 16.80,v:.036,sec:'Mobility'},
+  {t:'SNAP', n:'Snap',              e:'👻',p: 11.20,v:.040,sec:'Social'},
+  {t:'PINS', n:'Pinterest',         e:'📌',p: 34.50,v:.022,sec:'Social'},
+  {t:'TWLO', n:'Twilio',            e:'📞',p: 59.30,v:.024,sec:'SaaS'},
+  {t:'OKTA', n:'Okta',              e:'🔐',p: 88.40,v:.022,sec:'Security'},
+  {t:'ZS',   n:'Zscaler',           e:'🛡️',p:183.20,v:.024,sec:'Security'},
+  {t:'CRWD', n:'CrowdStrike',       e:'🦅',p:284.90,v:.022,sec:'Security'},
+  {t:'PANW', n:'Palo Alto',         e:'🔥',p:318.50,v:.018,sec:'Security'},
+  {t:'SMCI', n:'Super Micro',       e:'🖥️',p:852.30,v:.040,sec:'AI'},
+  // ── 추가 한국주
+  {t:'352820',n:'하이브',            e:'🎤',p:237000,v:.018,sec:'Entertainment'},
+  {t:'041510',n:'에스엠',            e:'🎵',p: 82400,v:.020,sec:'Entertainment'},
+  {t:'035760',n:'CJ ENM',           e:'🎬',p: 63200,v:.016,sec:'Media'},
 ];
 
 const H={}; // price history: {ticker: [{t,o,h,l,c,v}]}
@@ -871,6 +905,15 @@ const NEWS=[
   {t:'066570',tx:'LG전자, OLED TV 프리미엄 시장 점유율 1위 수성',d:'up',impact:'pos'},
   {t:'036570',tx:'엔씨소프트, 신작 TL 글로벌 출시 성과 부진',d:'',impact:'neg'},
   {t:'293490',tx:'카카오게임즈, 오딘 업데이트 이후 매출 회복 조짐',d:'up',impact:'pos'},
+  {t:'PLTR',tx:'팔란티어, 미 국방부 AI 계약 10억달러 수주 확정',d:'hot',impact:'pos'},
+  {t:'COIN',tx:'코인베이스, 비트코인 현물 ETF 거래 수수료 급증',d:'hot',impact:'pos'},
+  {t:'CRWD',tx:'크라우드스트라이크, 글로벌 사이버 침해 사고로 계약 취소 우려',d:'',impact:'neg'},
+  {t:'SNOW',tx:'스노우플레이크, 클라우드 데이터 웨어하우스 점유율 확대',d:'up',impact:'pos'},
+  {t:'SHOP',tx:'쇼피파이, 소기업 전자상거래 플랫폼 점유율 25% 돌파',d:'up',impact:'pos'},
+  {t:'SMCI',tx:'슈퍼마이크로, 회계 감사 이슈로 나스닥 상장폐지 우려',d:'',impact:'neg'},
+  {t:'352820',tx:'하이브, BTS 군복무 복귀 기대감에 주가 상승',d:'hot',impact:'pos'},
+  {t:'NET', tx:'클라우드플레어, AI 추론 엣지 서비스 출시로 고성장 기대',d:'up',impact:'pos'},
+  {t:'PANW',tx:'팔로알토, 제로트러스트 보안 수요 급증으로 수주 신기록',d:'hot',impact:'pos'},
 ];
 // 아직 발행 안 된 뉴스 풀 (셔플해서 순서대로 꺼냄)
 let newsPool=[];
@@ -909,13 +952,30 @@ const toKRW=(p,t)=>isKRW(t)?p:p*KRW_RATE;
 const lastC=t=>H[t].length?H[t].at(-1).c:STOCKS.find(s=>s.t===t).p;
 
 function mkCandle(prev,vol,ms,ticker){
-  // 기본 GBM drift + 뉴스 기반 추가 drift (최대 0.02, 감쇠 적용)
-  const newsDrift = (S.priceTrend[ticker]||0);
-  const r=randn(0.00004 + newsDrift, vol);
-  const o=prev,c=Math.max(o*(1+r),.01);
-  const sw=Math.abs(randn(0,vol*.5));
-  return{t:ms,o,h:Math.max(o,c)*(1+sw),l:Math.min(o,c)*(1-sw),c,
-    v:Math.round(Math.abs(randn(50000,28000)))};
+  const s=STOCKS.find(x=>x.t===ticker);
+  const base=s?s.p:prev;
+
+  // 평균 회귀: 기준가 대비 비율로 복원력 결정
+  const ratio=prev/base;
+  let rev=0;
+  if(ratio<0.4)       rev= 0.035;
+  else if(ratio<0.6)  rev= 0.018;
+  else if(ratio<0.75) rev= 0.008;
+  else if(ratio<0.88) rev= 0.003;
+  else if(ratio>4.0)  rev=-0.020;
+  else if(ratio>2.5)  rev=-0.010;
+  else if(ratio>1.8)  rev=-0.005;
+  else if(ratio>1.3)  rev=-0.002;
+
+  const nd=(S.priceTrend&&S.priceTrend[ticker])||0;
+  const r=randn(0.00005+rev+nd, vol);
+  const o=prev;
+  const floor=base*0.18;         // 절대 하한: 기준가 18%
+  const c=Math.max(o*(1+r), floor);
+  const sw=Math.abs(randn(0, vol*0.38));
+  const hi=Math.max(o,c)*(1+sw);
+  const lo=Math.max(Math.min(o,c)*(1-sw), floor*0.96);
+  return {t:ms, o, h:hi, l:lo, c, v:Math.abs(Math.round(randn(50000,25000)))};
 }
 
 function initH(){
@@ -1345,48 +1405,62 @@ function updModalLive(){
   }
   document.getElementById('tPriceEl').textContent=fmtP(cur,t);
   updTotal();
-  // 차트 실시간 업데이트
-  if(S.chart&&S.period==='5m'){
+
+  // 차트 실시간 업데이트 (5분봉 한정)
+  if(!S.chart||S.period!=='5m')return;
+  const hArr=H[t];
+  const latest=hArr.at(-1);
+  if(!latest)return;
+  const lbl=fmtT(latest.t);
+
+  try{
     if(S.ctype==='line'){
-      const ds=S.chart.data.datasets[0],lb=S.chart.data.labels;
-      lb.push(fmtT(S.simTime.getTime()));
-      ds.data.push(cur);
-      if(lb.length>120){lb.shift();ds.data.shift();}
-      S.chart.update('none');
-    } else {
-      // 캔들: 최신 캔들 데이터로 차트 전체 갱신 (append last candle)
-      const h2=H[t];
-      const latest=h2.at(-1);
-      if(!latest)return;
       const lb=S.chart.data.labels;
-      const lbl=fmtT(latest.t);
-      const ds0=S.chart.data.datasets[0]; // wick
-      const ds1=S.chart.data.datasets[1]; // body
-      if(lb.length>0&&lb.at(-1)===fmtT(h2.at(-2)?.t)){
-        // 새 캔들 추가
-        lb.push(lbl);
-        ds0.data.push({x:lbl,y:[latest.l,latest.h]});
-        ds1.data.push({x:lbl,y:[Math.min(latest.o,latest.c),Math.max(latest.o,latest.c)]});
-        const isUp=latest.c>=latest.o;
-        ds0.backgroundColor.push(isUp?'rgba(232,41,75,.6)':'rgba(23,99,212,.6)');
-        ds1.backgroundColor.push(isUp?'#E8294B':'#1763D4');
-        if(lb.length>120){
-          lb.shift();ds0.data.shift();ds1.data.shift();
-          ds0.backgroundColor.shift();ds1.backgroundColor.shift();
-        }
+      const ds=S.chart.data.datasets[0];
+      if(!ds)return;
+      if(lb.length>0&&lb.at(-1)===lbl){
+        ds.data[ds.data.length-1]=latest.c;
       } else {
-        // 마지막 캔들 업데이트 (현재 형성 중)
+        lb.push(lbl);ds.data.push(latest.c);
+        if(lb.length>120){lb.shift();ds.data.shift();}
+      }
+      S.chart.update('none');
+
+    } else {
+      // 캔들: dataset[0]=wick, dataset[1]=body
+      const lb=S.chart.data.labels;
+      const dsW=S.chart.data.datasets[0];
+      const dsB=S.chart.data.datasets[1];
+      if(!dsW||!dsB)return;
+      // backgroundColor가 배열인지 보장
+      if(!Array.isArray(dsW.backgroundColor))dsW.backgroundColor=[...Array(lb.length)].map(()=>'rgba(23,99,212,.55)');
+      if(!Array.isArray(dsB.backgroundColor))dsB.backgroundColor=[...Array(lb.length)].map(()=>'#1763D4');
+
+      const isUp=latest.c>=latest.o;
+      const cB=isUp?'#E8294B':'#1763D4';
+      const cW=isUp?'rgba(232,41,75,.55)':'rgba(23,99,212,.55)';
+      const newB=[Math.min(latest.o,latest.c),Math.max(latest.o,latest.c)];
+      const newW=[latest.l,latest.h];
+
+      if(lb.length>0&&lb.at(-1)===lbl){
         const li=lb.length-1;
-        if(li>=0){
-          ds0.data[li]={x:lb[li],y:[latest.l,latest.h]};
-          ds1.data[li]={x:lb[li],y:[Math.min(latest.o,latest.c),Math.max(latest.o,latest.c)]};
-          const isUp=latest.c>=latest.o;
-          ds0.backgroundColor[li]=isUp?'rgba(232,41,75,.6)':'rgba(23,99,212,.6)';
-          ds1.backgroundColor[li]=isUp?'#E8294B':'#1763D4';
+        dsW.data[li]=newW; dsB.data[li]=newB;
+        dsW.backgroundColor[li]=cW; dsB.backgroundColor[li]=cB;
+      } else {
+        lb.push(lbl);
+        dsW.data.push(newW); dsB.data.push(newB);
+        dsW.backgroundColor.push(cW); dsB.backgroundColor.push(cB);
+        if(lb.length>120){
+          lb.shift();
+          dsW.data.shift(); dsB.data.shift();
+          dsW.backgroundColor.shift(); dsB.backgroundColor.shift();
         }
       }
       S.chart.update('none');
     }
+  }catch(e){
+    // 차트 오류 시 재초기화
+    renderModalChart();
   }
 }
 
@@ -1418,61 +1492,94 @@ function renderOB(){
 function getCandles(){
   const t=S.sel,h=H[t];
   let c;
-  if(S.period==='5m')c=h.slice(-80);
-  else if(S.period==='1D')c=h.slice(-288);
-  else if(S.period==='1W')c=h.slice(-Math.min(600,h.length));
-  else if(S.period==='1M')c=h.slice(-Math.min(1200,h.length));
-  else c=h;
+  if(S.period==='5m')      c=h.slice(-80);
+  else if(S.period==='1D') c=h.slice(-288);
+  else if(S.period==='1W') c=h.slice(-Math.min(600,h.length));
+  else if(S.period==='1M') c=h.slice(-Math.min(1200,h.length));
+  else                     c=h;
   if(c.length>160){const st=Math.ceil(c.length/160);c=c.filter((_,i)=>i%st===0);}
   return c;
 }
+
 function renderModalChart(){
   const cv=document.getElementById('stockChart');
-  if(S.chart){S.chart.destroy();S.chart=null;}
-  const candles=getCandles(),t=S.sel;
+  if(S.chart){try{S.chart.destroy();}catch(e){} S.chart=null;}
+  if(!S.sel||!H[S.sel])return;
+  const candles=getCandles(), t=S.sel;
+  if(!candles.length)return;
   const labels=candles.map(c=>fmtT(c.t));
   const closes=candles.map(c=>c.c);
   const isUp=closes.at(-1)>=closes[0];
-  const color=isUp?'#E8294B':'#1763D4';
+  const upC='#E8294B', dnC='#1763D4';
   const ctx=cv.getContext('2d');
-  const baseOpts={
-    responsive:true,maintainAspectRatio:false,
-    animation:{duration:0},
-    plugins:{legend:{display:false},tooltip:{backgroundColor:'#191F28',
-      titleColor:'#9EA7B4',bodyColor:'#fff',padding:8,cornerRadius:7}},
-    scales:{
-      x:{grid:{display:false},ticks:{font:{family:'JetBrains Mono',size:9},color:'#9EA7B4',maxTicksLimit:4,maxRotation:0},border:{display:false}},
-      y:{position:'right',grid:{color:'#EFF1F5'},ticks:{font:{family:'JetBrains Mono',size:9},color:'#9EA7B4',maxTicksLimit:4,callback:v=>fmtP(v,t)},border:{display:false}}
-    }
-  };
+  const scaleX={grid:{display:false},ticks:{font:{family:'JetBrains Mono',size:9},color:'#9EA7B4',maxTicksLimit:4,maxRotation:0},border:{display:false}};
+  const scaleY={position:'right',grid:{color:'#EFF1F5'},ticks:{font:{family:'JetBrains Mono',size:9},color:'#9EA7B4',maxTicksLimit:4,callback:v=>fmtP(v,t)},border:{display:false}};
+  const ttip={backgroundColor:'#191F28',titleColor:'#9EA7B4',bodyColor:'#fff',padding:8,cornerRadius:7};
+
   if(S.ctype==='line'){
-    S.chart=new Chart(ctx,{type:'line',
-      data:{labels,datasets:[{data:closes,borderColor:color,borderWidth:1.8,
-        pointRadius:0,tension:0.12,fill:true,
-        backgroundColor:ctx2=>{
-          const{chart:{ctx:c2,chartArea}}=ctx2;
-          if(!chartArea)return'transparent';
-          const g=c2.createLinearGradient(0,chartArea.top,0,chartArea.bottom);
-          g.addColorStop(0,isUp?'rgba(232,41,75,.16)':'rgba(23,99,212,.16)');
-          g.addColorStop(1,'rgba(255,255,255,0)');return g;
-        }}]},
-      options:{...baseOpts,interaction:{mode:'index',intersect:false},
-        plugins:{...baseOpts.plugins,tooltip:{...baseOpts.plugins.tooltip,
-          callbacks:{title:i=>i[0].label,label:i=>fmtP(i.raw,t)}}}}
+    S.chart=new Chart(ctx,{
+      type:'line',
+      data:{
+        labels:[...labels],
+        datasets:[{
+          data:[...closes],
+          borderColor:isUp?upC:dnC,
+          borderWidth:1.8,
+          pointRadius:0,
+          tension:0.1,
+          fill:true,
+          backgroundColor:ctx2=>{
+            const{chart:{ctx:c2,chartArea}}=ctx2;
+            if(!chartArea)return'transparent';
+            const g=c2.createLinearGradient(0,chartArea.top,0,chartArea.bottom);
+            g.addColorStop(0,isUp?'rgba(232,41,75,.14)':'rgba(23,99,212,.14)');
+            g.addColorStop(1,'rgba(255,255,255,0)');
+            return g;
+          }
+        }]
+      },
+      options:{
+        responsive:true,maintainAspectRatio:false,animation:{duration:0},
+        interaction:{mode:'index',intersect:false},
+        plugins:{legend:{display:false},tooltip:{...ttip,callbacks:{title:i=>i[0].label,label:i=>fmtP(i.raw,t)}}},
+        scales:{x:scaleX,y:scaleY}
+      }
     });
+
   } else {
-    const bd=candles.map(c=>({x:fmtT(c.t),y:[Math.min(c.o,c.c),Math.max(c.o,c.c)]}));
-    const wd=candles.map(c=>({x:fmtT(c.t),y:[c.l,c.h]}));
-    const cols=candles.map(c=>c.c>=c.o?'#E8294B':'#1763D4');
-    const wc=candles.map(c=>c.c>=c.o?'rgba(232,41,75,.6)':'rgba(23,99,212,.6)');
-    const bw=Math.max(2,Math.min(7,Math.floor(320/candles.length)));
-    S.chart=new Chart(ctx,{type:'bar',
-      data:{labels,datasets:[{data:wd,backgroundColor:wc,barThickness:1,order:2},{data:bd,backgroundColor:cols,barThickness:bw,order:1}]},
-      options:{...baseOpts,plugins:{...baseOpts.plugins,tooltip:{...baseOpts.plugins.tooltip,
-        callbacks:{title:i=>i[0].label,label:(i)=>{
-          const c=candles[i.dataIndex];if(!c)return'';
-          return[`시가 ${fmtP(c.o,t)}`,`고가 ${fmtP(c.h,t)}`,`저가 ${fmtP(c.l,t)}`,`종가 ${fmtP(c.c,t)}`];
-        }}}}}
+    // 캔들: body(몸통) + wick(심지) — backgroundColor 반드시 배열
+    const bodyData  = candles.map(c=>[Math.min(c.o,c.c), Math.max(c.o,c.c)]);
+    const wickData  = candles.map(c=>[c.l, c.h]);
+    const bodyColor = candles.map(c=>c.c>=c.o?upC:dnC);
+    const wickColor = candles.map(c=>c.c>=c.o?'rgba(232,41,75,.55)':'rgba(23,99,212,.55)');
+    const bw=Math.max(2, Math.min(8, Math.floor(280/Math.max(candles.length,1))));
+
+    S.chart=new Chart(ctx,{
+      type:'bar',
+      data:{
+        labels:[...labels],
+        datasets:[
+          // dataset[0] = wick (심지, 가는 막대)
+          {label:'wick', data:[...wickData],  backgroundColor:[...wickColor], barThickness:1,  order:2},
+          // dataset[1] = body (몸통, 굵은 막대)
+          {label:'body', data:[...bodyData],  backgroundColor:[...bodyColor], barThickness:bw, order:1}
+        ]
+      },
+      options:{
+        responsive:true,maintainAspectRatio:false,animation:{duration:0},
+        plugins:{
+          legend:{display:false},
+          tooltip:{...ttip,callbacks:{
+            title:i=>i[0].label,
+            label:(i)=>{
+              const c=candles[i.dataIndex];
+              if(!c)return'';
+              return[`시가 ${fmtP(c.o,t)}`,`고가 ${fmtP(c.h,t)}`,`저가 ${fmtP(c.l,t)}`,`종가 ${fmtP(c.c,t)}`];
+            }
+          }}
+        },
+        scales:{x:scaleX,y:scaleY}
+      }
     });
   }
 }
@@ -1754,14 +1861,33 @@ function toast(msg,type=''){
 function updClock(){
   document.getElementById('clkEl').textContent=
     S.simTime.toLocaleTimeString('ko-KR',{hour12:false});
-  // 경과 시간
-  const ms=Date.now()-S.startRealTime;
-  const days=Math.floor(ms/86400000);
-  const hh=Math.floor((ms%86400000)/3600000);
-  const mm=Math.floor((ms%3600000)/60000);
-  const ss=Math.floor((ms%60000)/1000);
-  const el=document.getElementById('elapsedEl');
-  if(el) el.textContent=`D+${days} · ${String(hh).padStart(2,'0')}:${String(mm).padStart(2,'0')}:${String(ss).padStart(2,'0')}`;
+
+  // ── 실제 경과 시간
+  const realMs=Date.now()-S.startRealTime;
+  const rd=Math.floor(realMs/86400000);
+  const rh=Math.floor((realMs%86400000)/3600000);
+  const rm=Math.floor((realMs%3600000)/60000);
+  const rs=Math.floor((realMs%60000)/1000);
+  const realStr=rd>0
+    ?`D+${rd} ${String(rh).padStart(2,'0')}:${String(rm).padStart(2,'0')}:${String(rs).padStart(2,'0')}`
+    :`${String(rh).padStart(2,'0')}:${String(rm).padStart(2,'0')}:${String(rs).padStart(2,'0')}`;
+
+  // ── 가상(배속) 경과 시간 — 틱수 × TICK_MS(300초)
+  const virtSec=S.tickCount*TICK_MS;
+  const vd=Math.floor(virtSec/86400);
+  const vh=Math.floor((virtSec%86400)/3600);
+  const vmin=Math.floor((virtSec%3600)/60);
+  let virtStr;
+  if(vd>=365)      virtStr=`${Math.floor(vd/365)}년 ${vd%365}일`;
+  else if(vd>=30)  virtStr=`${Math.floor(vd/30)}개월 ${vd%30}일`;
+  else if(vd>0)    virtStr=`${vd}일 ${vh}시간 ${vmin}분`;
+  else if(vh>0)    virtStr=`${vh}시간 ${vmin}분`;
+  else             virtStr=`${vmin}분`;
+
+  const re=document.getElementById('realElapsedEl');
+  const ve=document.getElementById('virtElapsedEl');
+  if(re)re.textContent=realStr;
+  if(ve)ve.textContent=virtStr;
 }
 
 /* ═══════ BOOT ═══════ */
