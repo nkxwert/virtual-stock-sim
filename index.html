@@ -742,7 +742,7 @@ const S={
   paused:false,
   tickTimer:null,
   tickCount:0,
-  simTime:new Date(),
+  simSec:0,              // 가상 시간(초), 0 = 0000-01-01 00:00:00
   filterQ:'',
   loanDlgOpen:false,
   startRealTime:Date.now(),    // 실제 시작 시각
@@ -849,6 +849,8 @@ const STOCKS=[
   {t:'352820',n:'하이브',            e:'🎤',p:237000,v:.018,sec:'Entertainment'},
   {t:'041510',n:'에스엠',            e:'🎵',p: 82400,v:.020,sec:'Entertainment'},
   {t:'035760',n:'CJ ENM',           e:'🎬',p: 63200,v:.016,sec:'Media'},
+  // ── 특수 파생상품
+  {t:'NKX',   n:'NKX x10M REVERSE', e:'💀',p:12_000_000_000_000,v:.001,sec:'Inverse'},
 ];
 
 const H={}; // price history: {ticker: [{t,o,h,l,c,v}]}
@@ -979,14 +981,27 @@ function mkCandle(prev,vol,ms,ticker){
 }
 
 function initH(){
-  const now=Date.now();
+  // 히스토리는 t=simSec 단위로 저장 (시작 전 과거)
+  // 90일 일봉: -90일 ~ 0초, 288개 5분봉: 0 ~ 86400초(1일)
   STOCKS.forEach(s=>{
     H[s.t]=[];
     S.priceTrend[s.t]=0;
-    let p=s.p;
-    for(let i=90;i>0;i--){const c=mkCandle(p,s.v*1.8,now-i*86400000,s.t);H[s.t].push(c);p=c.c;}
-    for(let i=288;i>0;i--){const c=mkCandle(p,s.v,now-i*TICK_MS*1000,s.t);H[s.t].push(c);p=c.c;}
+    let p=s.t==='NKX'?s.p:s.p;
+    // 90일 전부터 5분봉으로 초기화
+    const startSec=-(90*288)*TICK_MS; // 90일치 5분봉
+    for(let i=0;i<90*288;i++){
+      const c=mkCandle(p,s.v,startSec+i*TICK_MS,s.t);
+      H[s.t].push(c);p=c.c;
+    }
   });
+  // NKX 별도 초기화
+  H['NKX']=[];
+  const nkxBase=12_000_000_000_000; // 12조
+  let np=nkxBase;
+  const startSec=-(90*288)*TICK_MS;
+  for(let i=0;i<90*288;i++){
+    H['NKX'].push({t:startSec+i*TICK_MS,o:np,h:np*1.0001,l:np*0.9999,c:np,v:10});
+  }
 }
 
 /* ═══════ CREDIT SCORE ═══════ */
@@ -1068,7 +1083,7 @@ function publishNews(){
   if(newsPool.length===0)refillNewsPool();
   const n=newsPool.shift();
   // 뉴스 로그에 추가
-  S.newsLog.unshift({news:n, realTime:Date.now(), simTime:new Date(S.simTime)});
+  S.newsLog.unshift({news:n, realTime:Date.now(), simSec:S.simSec});
   if(S.newsLog.length>50)S.newsLog.pop();
   // 현재 피드 업데이트 (최신 5개)
   curNews=S.newsLog.slice(0,5).map(x=>x.news);
@@ -1084,43 +1099,81 @@ function publishNews(){
   S.lastNewsRealTime=Date.now();
 }
 
-/* ═══════ TICK ═══════ */
+/* ═══════ SIM TIME ═══════ */
+// 가상 시간 기원: 0000년 1월 1일 00:00:00
+// JS Date의 최솟값 -8640000000000000ms 는 너무 이전 → 그냥 0을 epoch으로 직접 관리
+// S.simSec: 가상 시간(초) — 0 = 0000-01-01 00:00:00
+function simSecToStr(sec){
+  const totalSec=Math.max(0,Math.floor(sec));
+  const ss=totalSec%60;
+  const totalMin=Math.floor(totalSec/60);
+  const mm=totalMin%60;
+  const totalHr=Math.floor(totalMin/60);
+  const hh=totalHr%24;
+  const totalDay=Math.floor(totalHr/24);
+  // 월/년 계산 (단순 30일/월, 12개월/년)
+  const yyyy=Math.floor(totalDay/365);
+  const rem=totalDay%365;
+  const mo=Math.floor(rem/30);
+  const dd=rem%30;
+  return `${String(yyyy).padStart(4,'0')}년 ${String(mo+1).padStart(2,'0')}월 `+
+         `${String(dd+1).padStart(2,'0')}일 `+
+         `${String(hh).padStart(2,'0')}:${String(mm).padStart(2,'0')}:${String(ss).padStart(2,'0')}`;
+}
+function simElapsedStr(sec){
+  const totalSec=Math.max(0,Math.floor(sec));
+  const vd=Math.floor(totalSec/86400);
+  const vh=Math.floor((totalSec%86400)/3600);
+  const vm=Math.floor((totalSec%3600)/60);
+  const vs=totalSec%60;
+  if(vd>=365*100)  return `${Math.floor(vd/365)}년 경과`;
+  if(vd>=365)      return `${Math.floor(vd/365)}년 ${vd%365}일`;
+  if(vd>=30)       return `${Math.floor(vd/30)}개월 ${vd%30}일`;
+  if(vd>0)         return `${vd}일 ${String(vh).padStart(2,'0')}:${String(vm).padStart(2,'0')}:${String(vs).padStart(2,'0')}`;
+  return `${String(vh).padStart(2,'0')}:${String(vm).padStart(2,'0')}:${String(vs).padStart(2,'0')}`;
+}
 function tick(){
   if(S.paused)return;
   S.tickCount++;
-  S.simTime=new Date(S.simTime.getTime()+TICK_MS*1000);
+  // 1배속=TICK_MS초/틱, N배속=TICK_MS*N초/틱
+  S.simSec+=TICK_MS*S.speed;
 
-  // 가격 업데이트 (뉴스 drift 포함)
+  // 일반 종목 가격 업데이트 + 평균 변화율 계산
+  let sumPct=0, cnt=0;
   STOCKS.forEach(s=>{
-    const c=mkCandle(lastC(s.t),s.v,S.simTime.getTime(),s.t);
+    if(s.t==='NKX')return;
+    const prev=lastC(s.t);
+    const c=mkCandle(prev,s.v,S.simSec,s.t);
     H[s.t].push(c);
     if(H[s.t].length>3500)H[s.t].splice(0,500);
-    // drift 감쇠: 매 틱마다 10% 줄어듦 (약 10틱 후 소멸)
+    sumPct+=(c.c-prev)/prev;
+    cnt++;
     if(S.priceTrend[s.t]){
       S.priceTrend[s.t]*=0.90;
       if(Math.abs(S.priceTrend[s.t])<0.00001)S.priceTrend[s.t]=0;
     }
   });
 
-  // 실제 시간 기준 뉴스 발행 (24시간마다 1개)
-  const now=Date.now();
-  const elapsed=now-S.startRealTime;
-  // 발행해야 할 뉴스 수 계산
-  const shouldHave=Math.floor(elapsed/NEWS_INTERVAL_MS);
-  const hasPublished=S.newsLog.length;
-  if(shouldHave>hasPublished)publishNews();
+  // NKX: 시장 평균 반대 × 10,000,000
+  const avgMkt=cnt>0?sumPct/cnt:0;
+  const nkxPrev=lastC('NKX');
+  const nkxChg=-avgMkt*10_000_000;
+  const nkxC=Math.max(nkxPrev*(1+nkxChg),1);
+  const sw=Math.abs(randn(0,0.0005));
+  H['NKX'].push({t:S.simSec,o:nkxPrev,h:Math.max(nkxPrev,nkxC)*(1+sw),l:Math.max(Math.min(nkxPrev,nkxC)*(1-sw),1),c:nkxC,v:10});
+  if(H['NKX'].length>3500)H['NKX'].splice(0,500);
 
-  // 이자 누적
+  // 이자 + 뉴스
   accrueInterest();
+  const now=Date.now();
+  if(Math.floor((now-S.startRealTime)/NEWS_INTERVAL_MS)>S.newsLog.length)publishNews();
 
   // 렌더 스로틀
-  const renderEvery = S.speed>=100000?100:S.speed>=10000?50:S.speed>=1000?20:S.speed>=100?8:S.speed>=20?4:S.speed>=5?2:1;
-  if(S.tickCount%renderEvery===0){
-    renderAsset();
-    renderStocks();
-    renderPort();
-    if(S.tickCount%(renderEvery*3)===0)renderHist();
-    if(S.tickCount%(renderEvery*6)===0)updTape();
+  const re=S.speed>=100000?100:S.speed>=10000?50:S.speed>=1000?20:S.speed>=100?8:S.speed>=20?4:S.speed>=5?2:1;
+  if(S.tickCount%re===0){
+    renderAsset();renderStocks();renderPort();
+    if(S.tickCount%(re*3)===0)renderHist();
+    if(S.tickCount%(re*6)===0)updTape();
   }
   if(S.sel)updModalLive();
   if(S.loanDlgOpen&&S.tickCount%5===0)renderLoanDlg();
@@ -1170,15 +1223,25 @@ function buildSpeedTicks(){
 /* ═══════ FORMATTERS ═══════ */
 function fmtP(p,t){return isKRW(t)?Math.round(p).toLocaleString('ko-KR')+'원':'$'+p.toFixed(2);}
 function fmtKRW(n,forceSign=false){
-  const sign=forceSign&&n>0?'+':'';
+  const sign=forceSign&&n>0?'+':n<0?'-':'';
   const a=Math.abs(n);
-  if(a>=1e8)return sign+(n/1e8).toFixed(2)+'억원';
-  if(a>=1e4)return sign+(n/1e4).toFixed(1)+'만원';
-  return sign+Math.round(n).toLocaleString('ko-KR')+'원';
+  if(a>=1e20)return sign+(a/1e20).toFixed(2)+'해원';
+  if(a>=1e16)return sign+(a/1e16).toFixed(2)+'경원';
+  if(a>=1e12)return sign+(a/1e12).toFixed(3)+'조원';
+  if(a>=1e8) return sign+(a/1e8).toFixed(2)+'억원';
+  if(a>=1e4) return sign+(a/1e4).toFixed(1)+'만원';
+  return sign+Math.round(a).toLocaleString('ko-KR')+'원';
 }
-function fmtT(ms){
-  const d=new Date(ms);
-  return`${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+function fmtT(sec){
+  // sec: 가상 시간 초 단위
+  const totalSec=Math.max(0,sec);
+  const totalMin=Math.floor(totalSec/60);
+  const hh=Math.floor(totalMin/60)%24;
+  const mm=totalMin%60;
+  const totalDay=Math.floor(totalSec/86400);
+  const dd=totalDay%30;
+  const mo=Math.floor(totalDay/30)%12;
+  return `${mo+1}/${dd+1} ${String(hh).padStart(2,'0')}:${String(mm).padStart(2,'0')}`;
 }
 
 /* ═══════ RENDER ═══════ */
@@ -1640,7 +1703,7 @@ function doTrade(){
       pos.avgCost=(pos.avgCost*pos.qty+krw*qty)/(pos.qty+qty);
       pos.qty+=qty;
     } else {S.port[t]={qty,avgCost:krw};}
-    S.hist.push({time:S.simTime.getTime(),type:'buy',ticker:t,qty,price:krw,total,pnl:null});
+    S.hist.push({time:S.simSec,type:'buy',ticker:t,qty,price:krw,total,pnl:null});
     toast(`✅ ${s.n} ${qty}주 매수!`,'ok');
   } else {
     const pos=S.port[t];
@@ -1650,7 +1713,7 @@ function doTrade(){
     S.cash+=total;
     pos.qty-=qty;
     if(pos.qty===0)delete S.port[t];
-    S.hist.push({time:S.simTime.getTime(),type:'sell',ticker:t,qty,price:krw,total,pnl});
+    S.hist.push({time:S.simSec,type:'sell',ticker:t,qty,price:krw,total,pnl});
     const pnlSign=pnl>=0?'+':'';
     toast(`${pnl>=0?'📈':'📉'} ${s.n} ${qty}주 매도 ${pnlSign}${fmtKRW(pnl)} (${pnlSign}${rate.toFixed(2)}%)`,'ok');
   }
@@ -1839,7 +1902,7 @@ function repayPartial(idx){
 function resetGame(){
   if(!confirm('초기화할까요? 모든 데이터가 삭제됩니다.'))return;
   S.cash=INIT_CASH;S.port={};S.hist=[];S.loans=[];S.totalInterestPaid=0;
-  S.newsLog=[];S.startRealTime=Date.now();S.lastNewsRealTime=0;
+  S.newsLog=[];S.startRealTime=Date.now();S.lastNewsRealTime=0;S.simSec=0;S.tickCount=0;
   STOCKS.forEach(s=>{S.priceTrend[s.t]=0;});
   refillNewsPool();
   renderAsset();renderPort();renderHist();renderNews();toast('🔄 초기화 완료','inf');
@@ -1859,10 +1922,10 @@ function toast(msg,type=''){
 }
 
 function updClock(){
-  document.getElementById('clkEl').textContent=
-    S.simTime.toLocaleTimeString('ko-KR',{hour12:false});
+  // 시뮬레이션 현재 시각
+  document.getElementById('clkEl').textContent=simSecToStr(S.simSec).slice(0,18);
 
-  // ── 실제 경과 시간
+  // 실제 경과
   const realMs=Date.now()-S.startRealTime;
   const rd=Math.floor(realMs/86400000);
   const rh=Math.floor((realMs%86400000)/3600000);
@@ -1872,17 +1935,8 @@ function updClock(){
     ?`D+${rd} ${String(rh).padStart(2,'0')}:${String(rm).padStart(2,'0')}:${String(rs).padStart(2,'0')}`
     :`${String(rh).padStart(2,'0')}:${String(rm).padStart(2,'0')}:${String(rs).padStart(2,'0')}`;
 
-  // ── 가상(배속) 경과 시간 — 틱수 × TICK_MS(300초)
-  const virtSec=S.tickCount*TICK_MS;
-  const vd=Math.floor(virtSec/86400);
-  const vh=Math.floor((virtSec%86400)/3600);
-  const vmin=Math.floor((virtSec%3600)/60);
-  let virtStr;
-  if(vd>=365)      virtStr=`${Math.floor(vd/365)}년 ${vd%365}일`;
-  else if(vd>=30)  virtStr=`${Math.floor(vd/30)}개월 ${vd%30}일`;
-  else if(vd>0)    virtStr=`${vd}일 ${vh}시간 ${vmin}분`;
-  else if(vh>0)    virtStr=`${vh}시간 ${vmin}분`;
-  else             virtStr=`${vmin}분`;
+  // 가상 경과 (simSec 누적)
+  const virtStr=simElapsedStr(S.simSec);
 
   const re=document.getElementById('realElapsedEl');
   const ve=document.getElementById('virtElapsedEl');
@@ -1893,7 +1947,7 @@ function updClock(){
 /* ═══════ BOOT ═══════ */
 initH();
 refillNewsPool();
-S.simTime=new Date();
+S.simSec=0;           // 가상 시간: 0000-01-01 00:00:00
 S.startRealTime=Date.now();
 S.lastNewsRealTime=0;
 buildSpeedTicks();
