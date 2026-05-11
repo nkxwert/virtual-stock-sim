@@ -449,7 +449,15 @@ body{font-family:var(--sans);background:var(--g1);color:var(--g7);
 .dlg-apply-btn:active{background:var(--blu2);}
 .dlg-apply-btn:disabled{background:var(--g3);color:var(--g4);cursor:not-allowed;}
 
-/* ══════════ TOAST ══════════ */
+/* ══════ NOTIFICATION SETTINGS ══════ */
+.notif-row{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px;padding-top:8px;border-top:1px solid var(--g2);}
+.notif-toggle{display:flex;align-items:center;gap:5px;padding:4px 8px;border-radius:100px;
+  background:var(--g1);border:1.5px solid var(--g2);cursor:pointer;transition:var(--ease);
+  font-size:10.5px;font-weight:700;color:var(--g5);user-select:none;}
+.notif-toggle.on{background:var(--dn2);border-color:var(--blue);color:var(--blue);}
+.notif-toggle .dot{width:7px;height:7px;border-radius:50%;background:var(--g3);flex-shrink:0;}
+.notif-toggle.on .dot{background:var(--blue);}
+.notif-section-lbl{font-size:9.5px;color:var(--g5);width:100%;margin-bottom:1px;}
 .twrap{position:fixed;bottom:calc(24px + var(--safe-b));left:50%;
   transform:translateX(-50%);z-index:500;
   display:flex;flex-direction:column;align-items:center;gap:5px;pointer-events:none;}
@@ -529,6 +537,15 @@ body{font-family:var(--sans);background:var(--g1);color:var(--g7);
         min="0" max="100" value="15" oninput="onSpeedSlider(this.value)"/>
     </div>
     <div class="speed-ticks" id="speedTicks"></div>
+    <!-- 알람 설정 -->
+    <div class="notif-row">
+      <div class="notif-section-lbl">🔔 알림 설정</div>
+      <div class="notif-toggle on" id="nt_trade" onclick="toggleNotif('trade',this)"><div class="dot"></div>거래 알림</div>
+      <div class="notif-toggle on" id="nt_news"  onclick="toggleNotif('news',this)"><div class="dot"></div>뉴스 알림</div>
+      <div class="notif-toggle on" id="nt_loan"  onclick="toggleNotif('loan',this)"><div class="dot"></div>대출 알림</div>
+      <div class="notif-toggle on" id="nt_warn"  onclick="toggleNotif('warn',this)"><div class="dot"></div>경고 알림</div>
+      <div class="notif-toggle on" id="nt_sys"   onclick="toggleNotif('sys',this)"><div class="dot"></div>시스템</div>
+    </div>
   </div>
 
   <!-- ══ 퀵 버튼 ══ -->
@@ -745,6 +762,7 @@ const S={
   simSec:0,              // 가상 시간(초), 0 = 0000-01-01 00:00:00
   filterQ:'',
   loanDlgOpen:false,
+  notif:{trade:true,news:true,loan:true,warn:true,sys:true}, // 알림 설정
   startRealTime:Date.now(),    // 실제 시작 시각
   newsLog:[],                  // 실제로 발행된 뉴스 [{news, realTime, simTime}]
   lastNewsRealTime:0,          // 마지막 뉴스 발행 실제시각
@@ -1057,7 +1075,7 @@ function accrueInterest(){
         S.cash-=charge;
       } else {
         // 강제 주식 청산
-        toast('⚠️ 이자 납부 위해 보유 주식 자동 청산','warn');
+        toast('⚠️ 이자 납부 위해 보유 주식 자동 청산','warn','warn');
         forcePartialSell(charge-S.cash);
         S.cash=Math.max(0,S.cash);
       }
@@ -1094,7 +1112,7 @@ function publishNews(){
   // 토스트 알림
   const s=STOCKS.find(x=>x.t===n.t);
   const icon=n.impact==='pos'?'📈':n.impact==='neg'?'📉':'📰';
-  toast(`${icon} [${s?.n||n.t}] ${n.tx.slice(0,28)}…`,'inf');
+  toast(`${icon} [${s?.n||n.t}] ${n.tx.slice(0,28)}…`,'inf','news');
   renderNews();
   S.lastNewsRealTime=Date.now();
 }
@@ -1102,7 +1120,11 @@ function publishNews(){
 /* ═══════ SIM TIME ═══════ */
 // 가상 시간 기원: 0000년 1월 1일 00:00:00
 // JS Date의 최솟값 -8640000000000000ms 는 너무 이전 → 그냥 0을 epoch으로 직접 관리
-// S.simSec: 가상 시간(초) — 0 = 0000-01-01 00:00:00
+// S.simSec: 가상 시간(초) — 0 = 0000년 00월 00일 00:00:00
+// 1배속 = 실제 시간과 동일하게 흐름
+// N배속 = 실제 1초당 N초 흐름
+let _lastTickRealMs=0; // 마지막 tick 호출 실제 시각
+
 function simSecToStr(sec){
   const totalSec=Math.max(0,Math.floor(sec));
   const ss=totalSec%60;
@@ -1111,13 +1133,13 @@ function simSecToStr(sec){
   const totalHr=Math.floor(totalMin/60);
   const hh=totalHr%24;
   const totalDay=Math.floor(totalHr/24);
-  // 월/년 계산 (단순 30일/월, 12개월/년)
   const yyyy=Math.floor(totalDay/365);
   const rem=totalDay%365;
-  const mo=Math.floor(rem/30);
-  const dd=rem%30;
-  return `${String(yyyy).padStart(4,'0')}년 ${String(mo+1).padStart(2,'0')}월 `+
-         `${String(dd+1).padStart(2,'0')}일 `+
+  const mo=Math.floor(rem/30);  // 0-based
+  const dd=rem%30;               // 0-based
+  return `${String(yyyy).padStart(4,'0')}년 `+
+         `${String(mo).padStart(2,'0')}월 `+
+         `${String(dd).padStart(2,'0')}일 `+
          `${String(hh).padStart(2,'0')}:${String(mm).padStart(2,'0')}:${String(ss).padStart(2,'0')}`;
 }
 function simElapsedStr(sec){
@@ -1132,14 +1154,22 @@ function simElapsedStr(sec){
   if(vd>0)         return `${vd}일 ${String(vh).padStart(2,'0')}:${String(vm).padStart(2,'0')}:${String(vs).padStart(2,'0')}`;
   return `${String(vh).padStart(2,'0')}:${String(vm).padStart(2,'0')}:${String(vs).padStart(2,'0')}`;
 }
+/* 가상 1일(86400 가상초)마다 뉴스 1개 */
+const NEWS_VIRT_INTERVAL=86_400;
+
 function tick(){
   if(S.paused)return;
   S.tickCount++;
-  // 1배속=TICK_MS초/틱, N배속=TICK_MS*N초/틱
-  S.simSec+=TICK_MS*S.speed;
+
+  // 실제 경과 시간 × 배속 = 가상 시간 증가
+  // 1배속이면 실제 시간과 동일하게 흐름
+  const nowMs=Date.now();
+  const realElapsedMs=_lastTickRealMs>0?(nowMs-_lastTickRealMs):50;
+  _lastTickRealMs=nowMs;
+  S.simSec+=(realElapsedMs/1000)*S.speed;
 
   // 일반 종목 가격 업데이트 + 평균 변화율 계산
-  let sumPct=0, cnt=0;
+  let sumPct=0,cnt=0;
   STOCKS.forEach(s=>{
     if(s.t==='NKX')return;
     const prev=lastC(s.t);
@@ -1163,10 +1193,12 @@ function tick(){
   H['NKX'].push({t:S.simSec,o:nkxPrev,h:Math.max(nkxPrev,nkxC)*(1+sw),l:Math.max(Math.min(nkxPrev,nkxC)*(1-sw),1),c:nkxC,v:10});
   if(H['NKX'].length>3500)H['NKX'].splice(0,500);
 
-  // 이자 + 뉴스
+  // 이자 누적
   accrueInterest();
-  const now=Date.now();
-  if(Math.floor((now-S.startRealTime)/NEWS_INTERVAL_MS)>S.newsLog.length)publishNews();
+
+  // 가상 시간 기준 뉴스 발행 (가상 1일마다 1개)
+  const virtDays=Math.floor(S.simSec/NEWS_VIRT_INTERVAL);
+  if(virtDays>S.newsLog.length)publishNews();
 
   // 렌더 스로틀
   const re=S.speed>=100000?100:S.speed>=10000?50:S.speed>=1000?20:S.speed>=100?8:S.speed>=20?4:S.speed>=5?2:1;
@@ -1190,25 +1222,100 @@ function applySpeed(spd){
   document.getElementById('speedBadge').textContent=disp;
   document.getElementById('speedLbl').textContent=disp+' 배속';
   document.getElementById('speedSlider').value=speedToSlider(spd);
-  clearInterval(S.tickTimer);
-  if(spd>=10000){
-    // 극초고속: 50ms마다 배치 (최대 500틱/배치)
-    const batchSize=Math.min(500, Math.round(spd/100));
-    S.tickTimer=setInterval(()=>{for(let i=0;i<batchSize;i++)tick();},50);
-  } else if(spd>=500){
-    const batchSize=Math.round(spd/100);
-    S.tickTimer=setInterval(()=>{for(let i=0;i<batchSize;i++)tick();},50);
-  } else {
-    const interval=Math.max(50,Math.round(2000/spd));
-    S.tickTimer=setInterval(tick,interval);
+  // RAF 루프가 속도를 자동 반영하므로 별도 타이머 재시작 불필요
+}
+
+/* ═══ requestAnimationFrame 기반 메인 루프 ═══
+   매 프레임(~16ms)마다 실제 경과시간을 계산해
+   그에 비례한 simSec을 증가시킴 → 배속이 얼마든 부드럽게 흐름
+   틱(가격계산)은 최소 PRICE_TICK_MS마다 한 번 실행
+════════════════════════════════════════════ */
+const PRICE_TICK_MS=50; // 가격 갱신 최소 간격(ms) — 50ms = 20fps 가격 업데이트
+let _rafId=null;
+let _lastFrameMs=0;
+let _tickAccumMs=0;      // 틱 누적 시간
+
+function rafLoop(nowMs){
+  _rafId=requestAnimationFrame(rafLoop);
+  if(S.paused){_lastFrameMs=nowMs;return;}
+
+  const frameMs=_lastFrameMs>0?Math.min(nowMs-_lastFrameMs,200):16; // 최대 200ms cap
+  _lastFrameMs=nowMs;
+
+  // 가상 시간 증가 (프레임마다 연속)
+  S.simSec+=(frameMs/1000)*S.speed;
+
+  // 가격은 PRICE_TICK_MS마다 한 번만 계산 (부하 조절)
+  _tickAccumMs+=frameMs;
+  const ticksNeeded=Math.floor(_tickAccumMs/PRICE_TICK_MS);
+  if(ticksNeeded>0){
+    _tickAccumMs-=ticksNeeded*PRICE_TICK_MS;
+    // 한 번에 최대 20틱 (무한 쌓임 방지)
+    const runs=Math.min(ticksNeeded,20);
+    for(let i=0;i<runs;i++) priceTick();
   }
+
+  // 렌더: 항상 매 프레임 (부드럽게)
+  setAssetTargets();     // 목표값 업데이트
+  lerpDisp();            // 보간
+  _flushAssetDOM();      // DOM 반영
+  if(S.sel)updModalLive();
+  // 무거운 렌더는 throttle
+  _rafRenderAcc=((_rafRenderAcc||0)+frameMs);
+  if(_rafRenderAcc>=80){
+    _rafRenderAcc=0;
+    renderStocks();renderPort();
+  }
+  _rafHeavyAcc=((_rafHeavyAcc||0)+frameMs);
+  if(_rafHeavyAcc>=300){
+    _rafHeavyAcc=0;
+    renderHist();updTape();
+  }
+  if(S.loanDlgOpen) _rafLoanAcc=((_rafLoanAcc||0)+frameMs);
+  if(_rafLoanAcc>=200){_rafLoanAcc=0;renderLoanDlg();}
+}
+let _rafRenderAcc=0,_rafHeavyAcc=0,_rafLoanAcc=0;
+
+/* priceTick: 가격만 계산, 렌더는 rafLoop에서 */
+function priceTick(){
+  S.tickCount++;
+
+  let sumPct=0,cnt=0;
+  STOCKS.forEach(s=>{
+    if(s.t==='NKX')return;
+    const prev=lastC(s.t);
+    const c=mkCandle(prev,s.v,S.simSec,s.t);
+    H[s.t].push(c);
+    if(H[s.t].length>3500)H[s.t].splice(0,500);
+    sumPct+=(c.c-prev)/prev;
+    cnt++;
+    if(S.priceTrend[s.t]){
+      S.priceTrend[s.t]*=0.92;
+      if(Math.abs(S.priceTrend[s.t])<0.00001)S.priceTrend[s.t]=0;
+    }
+  });
+
+  // NKX
+  const avgMkt=cnt>0?sumPct/cnt:0;
+  const nkxPrev=lastC('NKX');
+  const nkxC=Math.max(nkxPrev*(1-avgMkt*10_000_000),1);
+  const sw=Math.abs(randn(0,0.0003));
+  H['NKX'].push({t:S.simSec,o:nkxPrev,h:Math.max(nkxPrev,nkxC)*(1+sw),l:Math.max(Math.min(nkxPrev,nkxC)*(1-sw),1),c:nkxC,v:10});
+  if(H['NKX'].length>3500)H['NKX'].splice(0,500);
+
+  // 이자 (10틱마다)
+  if(S.tickCount%10===0)accrueInterest();
+
+  // 가상시간 기준 뉴스
+  const virtDays=Math.floor(S.simSec/NEWS_VIRT_INTERVAL);
+  if(virtDays>S.newsLog.length)publishNews();
 }
 function togglePause(){
   S.paused=!S.paused;
   const btn=document.getElementById('pauseBtn');
   btn.textContent=S.paused?'▶':'⏸';
   btn.classList.toggle('paused',S.paused);
-  toast(S.paused?'⏸ 일시정지':'▶ 재개','inf');
+  toast(S.paused?'⏸ 일시정지':'▶ 재개','inf','sys');
 }
 function buildSpeedTicks(){
   const wrap=document.getElementById('speedTicks');
@@ -1246,18 +1353,9 @@ function fmtT(sec){
 
 /* ═══════ RENDER ═══════ */
 function renderAsset(){
-  const sv=stockValue(), inv=INIT_CASH+totalLoanBalance();
-  const total=S.cash+sv, pnl=total-inv, rate=inv>0?pnl/inv*100:0;
-  const cls=pnl>=0?'pos':'neg';
-  document.getElementById('totalAsset').textContent=fmtKRW(total);
-  document.getElementById('cashEl').textContent=fmtKRW(S.cash);
-  const pnlEl=document.getElementById('pnlEl');
-  pnlEl.className=`ac-s-val ${cls}`;
-  pnlEl.textContent=(pnl>=0?'+':'')+fmtKRW(pnl);
-  const rateEl=document.getElementById('rateEl');
-  rateEl.className=`ac-s-val ${cls}`;
-  rateEl.textContent=(rate>=0?'+':'')+rate.toFixed(2)+'%';
-  document.getElementById('loanChip').textContent=`대출 ${fmtKRW(totalLoanBalance())} ›`;
+  setAssetTargets();
+  if(!_dispInited){for(const k in _disp)_disp[k]=_target[k];_dispInited=true;}
+  _flushAssetDOM();
 }
 
 /* ── Stocks (requestAnimationFrame 활용) ── */
@@ -1399,10 +1497,11 @@ function fmtAgo(realTime){
 }
 
 function fmtNextNews(){
-  const elapsed=Date.now()-S.startRealTime;
-  const next=NEWS_INTERVAL_MS-((elapsed)%NEWS_INTERVAL_MS);
-  const h=Math.floor(next/3600000), m=Math.floor((next%3600000)/60000);
-  return h>0?`${h}시간 ${m}분`:`${m}분`;
+  const nextSec=NEWS_VIRT_INTERVAL-(S.simSec%NEWS_VIRT_INTERVAL);
+  const h=Math.floor(nextSec/3600),m=Math.floor((nextSec%3600)/60),s=Math.floor(nextSec%60);
+  if(h>0)return`${h}시간 ${m}분`;
+  if(m>0)return`${m}분 ${s}초`;
+  return`${s}초`;
 }
 
 function refillNewsPool(){
@@ -1875,7 +1974,7 @@ function applyLoan(){
   });
   renderLoanDlg();
   renderAsset();
-  toast(`💰 ${fmtKRW(amt)} 대출 실행! (연${(prod.rate*100).toFixed(1)}%)`,'ok');
+  toast(`💰 ${fmtKRW(amt)} 대출 실행! (연${(prod.rate*100).toFixed(1)}%)`,'ok','loan');
 }
 
 function repayFull(idx){
@@ -1883,7 +1982,7 @@ function repayFull(idx){
   if(!loan)return;
   if(S.cash<loan.balance){toast(`💸 잔액 부족! ${fmtKRW(loan.balance-S.cash)} 더 필요합니다`,'err');return;}
   S.cash-=loan.balance;
-  toast(`✅ ${fmtKRW(loan.balance)} 전액 상환 완료!`,'ok');
+  toast(`✅ ${fmtKRW(loan.balance)} 전액 상환 완료!`,'ok','loan');
   S.loans.splice(idx,1);
   renderLoanDlg();renderAsset();
 }
@@ -1894,7 +1993,7 @@ function repayPartial(idx){
   S.cash-=amt;
   loan.balance-=amt;
   if(loan.balance<=0){S.loans.splice(idx,1);}
-  toast(`일부 상환 ${fmtKRW(amt)} 완료`,'ok');
+  toast(`일부 상환 ${fmtKRW(amt)} 완료`,'ok','loan');
   renderLoanDlg();renderAsset();
 }
 
@@ -1902,23 +2001,90 @@ function repayPartial(idx){
 function resetGame(){
   if(!confirm('초기화할까요? 모든 데이터가 삭제됩니다.'))return;
   S.cash=INIT_CASH;S.port={};S.hist=[];S.loans=[];S.totalInterestPaid=0;
-  S.newsLog=[];S.startRealTime=Date.now();S.lastNewsRealTime=0;S.simSec=0;S.tickCount=0;
+  S.newsLog=[];S.startRealTime=Date.now();S.lastNewsRealTime=0;S.simSec=0;S.tickCount=0;_lastTickRealMs=Date.now();_dispInited=false;
   STOCKS.forEach(s=>{S.priceTrend[s.t]=0;});
   refillNewsPool();
-  renderAsset();renderPort();renderHist();renderNews();toast('🔄 초기화 완료','inf');
+  renderAsset();renderPort();renderHist();renderNews();toast('🔄 초기화 완료','inf','sys');
 }
 
 /* ═══════ MISC ═══════ */
 function filterStocks(q){S.filterQ=q;_renderStocksInner();}
 function gotoId(id){document.getElementById(id).scrollIntoView({behavior:'smooth'});}
 
-function toast(msg,type=''){
+/* ═══════ NOTIF SETTINGS ═══════ */
+function toggleNotif(key,el){
+  S.notif[key]=!S.notif[key];
+  el.classList.toggle('on',S.notif[key]);
+}
+
+// toast type → notif key 매핑
+const TOAST_NOTIF_MAP={ok:'trade',err:'trade',inf:'news',warn:'warn',loan:'loan'};
+function toast(msg,type='',notifKey=null){
+  // 알림 설정 체크
+  const key=notifKey||(type?TOAST_NOTIF_MAP[type]:'sys')||'sys';
+  if(S.notif&&!S.notif[key])return;
+
   const wrap=document.getElementById('tWrap');
+  // 같은 메시지 중복 방지 (100ms 이내)
+  const existing=[...wrap.children].find(c=>c.textContent===msg);
+  if(existing)return;
+
   const el=document.createElement('div');
   el.className=`toast ${type}`;el.textContent=msg;
   wrap.appendChild(el);
   requestAnimationFrame(()=>requestAnimationFrame(()=>el.classList.add('show')));
   setTimeout(()=>{el.classList.remove('show');setTimeout(()=>el.remove(),200);},2800);
+}
+
+/* ═══════ SMOOTH NUMBER DISPLAY ═══════ */
+// 각 수치의 현재 표시값(display value)을 보간해서 부드럽게 갱신
+const _disp={total:0,cash:0,pnl:0,rate:0};
+const _target={total:0,cash:0,pnl:0,rate:0};
+const LERP_SPEED=0.18; // 프레임당 보간 비율 (0~1)
+
+function setAssetTargets(){
+  const sv=stockValue(), inv=INIT_CASH+totalLoanBalance();
+  const total=S.cash+sv, pnl=total-inv, rate=inv>0?pnl/inv*100:0;
+  _target.total=total;
+  _target.cash=S.cash;
+  _target.pnl=pnl;
+  _target.rate=rate;
+}
+
+function lerpDisp(){
+  // 각 값을 목표값으로 지수 보간
+  let changed=false;
+  for(const k in _disp){
+    const diff=_target[k]-_disp[k];
+    if(Math.abs(diff)<0.01){_disp[k]=_target[k];}
+    else{_disp[k]+=diff*LERP_SPEED; changed=true;}
+  }
+  return changed;
+}
+
+function renderAsset(){
+  setAssetTargets();
+  // 즉시 snap (첫 렌더 또는 초기화 후)
+  if(!_dispInited){
+    for(const k in _disp)_disp[k]=_target[k];
+    _dispInited=true;
+  }
+  _flushAssetDOM();
+}
+let _dispInited=false;
+
+function _flushAssetDOM(){
+  const t=_disp.total, p=_disp.pnl, r=_disp.rate;
+  const cls=p>=0?'pos':'neg';
+  document.getElementById('totalAsset').textContent=fmtKRW(t);
+  document.getElementById('cashEl').textContent=fmtKRW(_disp.cash);
+  const pnlEl=document.getElementById('pnlEl');
+  pnlEl.className=`ac-s-val ${cls}`;
+  pnlEl.textContent=(p>=0?'+':'')+fmtKRW(p);
+  const rateEl=document.getElementById('rateEl');
+  rateEl.className=`ac-s-val ${cls}`;
+  rateEl.textContent=(r>=0?'+':'')+r.toFixed(2)+'%';
+  document.getElementById('loanChip').textContent=`대출 ${fmtKRW(totalLoanBalance())} ›`;
 }
 
 function updClock(){
@@ -1947,9 +2113,10 @@ function updClock(){
 /* ═══════ BOOT ═══════ */
 initH();
 refillNewsPool();
-S.simSec=0;           // 가상 시간: 0000-01-01 00:00:00
+S.simSec=0;           // 가상 시간: 0000년 00월 00일 00:00:00
 S.startRealTime=Date.now();
 S.lastNewsRealTime=0;
+_lastTickRealMs=Date.now();
 buildSpeedTicks();
 
 // 초기 렌더
