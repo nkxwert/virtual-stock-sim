@@ -1318,53 +1318,58 @@ function applySpeed(spd){
 /* ═══ requestAnimationFrame 기반 메인 루프 ═══
    매 프레임(~16ms)마다 실제 경과시간을 계산해
    그에 비례한 simSec을 증가시킴 → 배속이 얼마든 부드럽게 흐름
-   틱(가격계산)은 최소 PRICE_TICK_MS마다 한 번 실행
+   틱(가격계산)은 가상 시간 2초마다 한 번 실행, 배속에 비례해 더 많이 실행
 ════════════════════════════════════════════ */
-const PRICE_TICK_MS=50; // 가격 갱신 최소 간격(ms) — 50ms = 20fps 가격 업데이트
 let _rafId=null;
 let _lastFrameMs=0;
-let _tickAccumMs=0;      // 틱 누적 시간
 
 function rafLoop(nowMs){
   _rafId=requestAnimationFrame(rafLoop);
   if(S.paused){_lastFrameMs=nowMs;return;}
 
-  const frameMs=_lastFrameMs>0?Math.min(nowMs-_lastFrameMs,200):16; // 최대 200ms cap
+  const frameMs=_lastFrameMs>0?Math.min(nowMs-_lastFrameMs,100):16;
   _lastFrameMs=nowMs;
 
-  // 가상 시간 증가 (프레임마다 연속)
-  S.simSec+=(frameMs/1000)*S.speed;
+  // 가상 시간 증가: 실제 프레임 시간 × 배속
+  const simDelta=(frameMs/1000)*S.speed; // 가상 초
+  S.simSec+=simDelta;
 
-  // 가격은 PRICE_TICK_MS마다 한 번만 계산 (부하 조절)
-  _tickAccumMs+=frameMs;
-  const ticksNeeded=Math.floor(_tickAccumMs/PRICE_TICK_MS);
+  // 가격 틱: 가상 시간 기준으로 누적
+  // PRICE_TICK_VSEC = 가격 갱신 간격(가상 초) → 1배속=2초, 고배속=자동 더 많이
+  const PRICE_TICK_VSEC=2; // 가상 2초마다 가격 갱신
+  _tickAccumVSec=((_tickAccumVSec||0)+simDelta);
+  const ticksNeeded=Math.floor(_tickAccumVSec/PRICE_TICK_VSEC);
   if(ticksNeeded>0){
-    _tickAccumMs-=ticksNeeded*PRICE_TICK_MS;
-    // 한 번에 최대 20틱 (무한 쌓임 방지)
-    const runs=Math.min(ticksNeeded,20);
+    _tickAccumVSec-=ticksNeeded*PRICE_TICK_VSEC;
+    // 한 프레임에 너무 많은 틱은 cap (렌더 블로킹 방지)
+    const runs=Math.min(ticksNeeded, S.speed>=10000?200:S.speed>=1000?50:S.speed>=100?20:10);
     for(let i=0;i<runs;i++) priceTick();
   }
 
-  // 렌더: 항상 매 프레임 (부드럽게)
-  setAssetTargets();     // 목표값 업데이트
-  lerpDisp();            // 보간
-  _flushAssetDOM();      // DOM 반영
-  updVirtElapsed();      // 가상 경과 부드럽게
+  // 렌더: 항상 매 프레임
+  setAssetTargets();
+  lerpDisp();
+  _flushAssetDOM();
+  updVirtElapsed();
   if(S.sel)updModalLive();
-  // 무거운 렌더는 throttle
-  _rafRenderAcc=((_rafRenderAcc||0)+frameMs);
+
+  // 무거운 렌더 throttle (실제 시간 기준)
+  _rafRenderAcc+=frameMs;
   if(_rafRenderAcc>=80){
     _rafRenderAcc=0;
     renderStocks();renderPort();
   }
-  _rafHeavyAcc=((_rafHeavyAcc||0)+frameMs);
+  _rafHeavyAcc+=frameMs;
   if(_rafHeavyAcc>=300){
     _rafHeavyAcc=0;
     renderHist();updTape();
   }
-  if(S.loanDlgOpen) _rafLoanAcc=((_rafLoanAcc||0)+frameMs);
-  if(_rafLoanAcc>=200){_rafLoanAcc=0;renderLoanDlg();}
+  if(S.loanDlgOpen){
+    _rafLoanAcc+=frameMs;
+    if(_rafLoanAcc>=200){_rafLoanAcc=0;renderLoanDlg();}
+  }
 }
+let _tickAccumVSec=0;
 let _rafRenderAcc=0,_rafHeavyAcc=0,_rafLoanAcc=0;
 
 /* priceTick: 가격만 계산, 렌더는 rafLoop에서 */
@@ -1386,10 +1391,10 @@ function priceTick(){
     }
   });
 
-  // NKX: 시장 평균 반대 × 10,000,000
+  // NKX: 시장 평균 반대 × 10,000 (X1000배속 기준 X1처럼 느껴지도록 조정)
   const avgMkt=cnt>0?sumPct/cnt:0;
   const nkxPrev=lastC('NKX');
-  const nkxChg=-avgMkt*10_000_000;
+  const nkxChg=-avgMkt*10_000;
   let nkxC=Math.max(nkxPrev*(1+nkxChg),1);
 
   // $1000(USD) = 1,320,000원 이하면 서킷브레이커: 10만주 강제매수 → 반등
