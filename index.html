@@ -471,6 +471,74 @@ body{font-family:var(--sans);background:var(--g1);color:var(--g7);
 .toast.warn{background:var(--warn);}
 
 /* scrollbar */
+/* ══════ SETTINGS BUTTON ══════ */
+.settings-btn{
+  width:34px;height:34px;border-radius:50%;background:var(--g1);
+  border:1.5px solid var(--g2);cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  font-size:16px;flex-shrink:0;transition:var(--ease);
+}
+.settings-btn:active{background:var(--g2);}
+
+/* ══════ SETTINGS SHEET ══════ */
+.stbg{position:fixed;inset:0;z-index:400;background:rgba(0,0,0,.5);
+  backdrop-filter:blur(6px);display:flex;align-items:flex-end;
+  opacity:0;pointer-events:none;transition:opacity .2s ease;}
+.stbg.open{opacity:1;pointer-events:all;}
+.stsheet{background:var(--g0);width:100%;max-width:480px;margin:0 auto;
+  border-radius:var(--rx) var(--rx) 0 0;
+  transform:translateY(36px);transition:transform .26s cubic-bezier(.32,1.2,.6,1);
+  max-height:88vh;overflow-y:auto;
+  padding-bottom:calc(16px + var(--safe-b));}
+.stbg.open .stsheet{transform:translateY(0);}
+.st-handle{width:34px;height:4px;background:var(--g2);border-radius:100px;margin:10px auto 0;}
+.st-hdr{display:flex;align-items:center;justify-content:space-between;
+  padding:14px 16px 0;}
+.st-title{font-size:16px;font-weight:900;}
+.st-close{width:28px;height:28px;border-radius:50%;background:var(--g1);border:none;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px;}
+
+/* 설정 섹션 */
+.st-sec{padding:14px 16px 0;}
+.st-sec-ttl{font-size:11px;font-weight:800;color:var(--g5);
+  text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;}
+.st-row{display:flex;align-items:center;justify-content:space-between;
+  padding:10px 12px;background:var(--g1);border-radius:var(--rm);
+  margin-bottom:6px;border:1.5px solid var(--g2);}
+.st-row-left{display:flex;align-items:center;gap:10px;}
+.st-row-icon{font-size:18px;width:28px;text-align:center;}
+.st-row-label{font-size:13px;font-weight:700;color:var(--g7);}
+.st-row-sub{font-size:10.5px;color:var(--g5);margin-top:1px;}
+
+/* 토글 스위치 */
+.sw{width:42px;height:24px;border-radius:100px;background:var(--g3);
+  position:relative;cursor:pointer;transition:.25s ease;flex-shrink:0;}
+.sw.on{background:var(--blue);}
+.sw::after{content:'';position:absolute;top:3px;left:3px;
+  width:18px;height:18px;border-radius:50%;background:#fff;
+  transition:.25s cubic-bezier(.34,1.4,.64,1);box-shadow:0 1px 3px rgba(0,0,0,.2);}
+.sw.on::after{transform:translateX(18px);}
+
+/* 레이아웃 순서 조정 */
+.layout-list{padding:0 16px 8px;}
+.layout-item{display:flex;align-items:center;gap:10px;
+  padding:9px 12px;background:var(--g1);border-radius:var(--rm);
+  margin-bottom:5px;border:1.5px solid var(--g2);cursor:grab;
+  transition:var(--ease);}
+.layout-item.drag-over{border-color:var(--blue);background:var(--dn2);}
+.layout-item.hidden-sec{opacity:.45;}
+.layout-drag-handle{color:var(--g4);font-size:14px;cursor:grab;}
+.layout-label{flex:1;font-size:13px;font-weight:700;}
+.layout-eye{font-size:14px;cursor:pointer;padding:2px 4px;border-radius:5px;
+  background:none;border:none;transition:var(--ease);}
+.layout-eye:hover{background:var(--g2);}
+.st-chart-btn{padding:5px 10px;border-radius:7px;border:1.5px solid var(--g2);
+  background:none;font-size:11px;font-weight:700;color:var(--g5);cursor:pointer;transition:var(--ease);}
+.st-chart-btn.on{background:var(--g7);color:#fff;border-color:var(--g7);}
+
+/* 구분선 */
+.st-divider{margin:4px 16px 0;border:none;border-top:1px solid var(--g2);}
+
 ::-webkit-scrollbar{width:3px;}
 ::-webkit-scrollbar-thumb{background:var(--g2);border-radius:100px;}
 </style>
@@ -488,6 +556,7 @@ body{font-family:var(--sans);background:var(--g1);color:var(--g7);
     <div class="clk" id="clkEl">--:--:--</div>
     <div class="speed-label" id="speedLbl">1× 배속</div>
   </div>
+  <button class="settings-btn" onclick="openSettings()" title="설정">⚙️</button>
 </header>
 
 <div class="page">
@@ -537,15 +606,6 @@ body{font-family:var(--sans);background:var(--g1);color:var(--g7);
         min="0" max="100" value="15" oninput="onSpeedSlider(this.value)"/>
     </div>
     <div class="speed-ticks" id="speedTicks"></div>
-    <!-- 알람 설정 -->
-    <div class="notif-row">
-      <div class="notif-section-lbl">🔔 알림 설정</div>
-      <div class="notif-toggle on" id="nt_trade" onclick="toggleNotif('trade',this)"><div class="dot"></div>거래 알림</div>
-      <div class="notif-toggle on" id="nt_news"  onclick="toggleNotif('news',this)"><div class="dot"></div>뉴스 알림</div>
-      <div class="notif-toggle on" id="nt_loan"  onclick="toggleNotif('loan',this)"><div class="dot"></div>대출 알림</div>
-      <div class="notif-toggle on" id="nt_warn"  onclick="toggleNotif('warn',this)"><div class="dot"></div>경고 알림</div>
-      <div class="notif-toggle on" id="nt_sys"   onclick="toggleNotif('sys',this)"><div class="dot"></div>시스템</div>
-    </div>
   </div>
 
   <!-- ══ 퀵 버튼 ══ -->
@@ -729,6 +789,89 @@ body{font-family:var(--sans);background:var(--g1);color:var(--g7);
   </div>
 </div>
 
+<!-- ══ SETTINGS SHEET ══ -->
+<div class="stbg" id="settingsDlg" onclick="handleStBg(event)">
+  <div class="stsheet">
+    <div class="st-handle"></div>
+    <div class="st-hdr">
+      <div class="st-title">⚙️ 설정</div>
+      <button class="st-close" onclick="closeSettings()">✕</button>
+    </div>
+
+    <!-- 알림 설정 -->
+    <div class="st-sec">
+      <div class="st-sec-ttl">🔔 알림</div>
+      <div class="st-row">
+        <div class="st-row-left">
+          <div class="st-row-icon">📈</div>
+          <div><div class="st-row-label">거래 알림</div><div class="st-row-sub">매수·매도 완료 및 오류</div></div>
+        </div>
+        <div class="sw on" id="sw_trade" onclick="swToggle('trade',this)"></div>
+      </div>
+      <div class="st-row">
+        <div class="st-row-left">
+          <div class="st-row-icon">📰</div>
+          <div><div class="st-row-label">뉴스 알림</div><div class="st-row-sub">시장 뉴스 발행 시</div></div>
+        </div>
+        <div class="sw on" id="sw_news" onclick="swToggle('news',this)"></div>
+      </div>
+      <div class="st-row">
+        <div class="st-row-left">
+          <div class="st-row-icon">🏦</div>
+          <div><div class="st-row-label">대출 알림</div><div class="st-row-sub">대출·상환 완료</div></div>
+        </div>
+        <div class="sw on" id="sw_loan" onclick="swToggle('loan',this)"></div>
+      </div>
+      <div class="st-row">
+        <div class="st-row-left">
+          <div class="st-row-icon">⚠️</div>
+          <div><div class="st-row-label">경고 알림</div><div class="st-row-sub">이자 청산·잔액 부족</div></div>
+        </div>
+        <div class="sw on" id="sw_warn" onclick="swToggle('warn',this)"></div>
+      </div>
+      <div class="st-row">
+        <div class="st-row-left">
+          <div class="st-row-icon">🔧</div>
+          <div><div class="st-row-label">시스템 알림</div><div class="st-row-sub">일시정지·초기화·서킷브레이커</div></div>
+        </div>
+        <div class="sw on" id="sw_sys" onclick="swToggle('sys',this)"></div>
+      </div>
+    </div>
+
+    <hr class="st-divider"/>
+
+    <!-- 인터페이스 섹션 표시 설정 -->
+    <div class="st-sec" style="margin-top:8px;">
+      <div class="st-sec-ttl">🗂 인터페이스 섹션</div>
+    </div>
+    <div class="layout-list" id="layoutList"></div>
+
+    <hr class="st-divider"/>
+
+    <!-- 기타 설정 -->
+    <div class="st-sec" style="margin-top:8px;padding-bottom:6px;">
+      <div class="st-sec-ttl">🎨 표시</div>
+      <div class="st-row">
+        <div class="st-row-left">
+          <div class="st-row-icon">🕯</div>
+          <div><div class="st-row-label">차트 기본값</div><div class="st-row-sub">라인 / 캔들</div></div>
+        </div>
+        <div style="display:flex;gap:4px;">
+          <button class="st-chart-btn on" id="cht_line" onclick="setDefaultChart('line',this)">라인</button>
+          <button class="st-chart-btn" id="cht_candle" onclick="setDefaultChart('candle',this)">캔들</button>
+        </div>
+      </div>
+      <div class="st-row">
+        <div class="st-row-left">
+          <div class="st-row-icon">💥</div>
+          <div><div class="st-row-label">NKX 서킷브레이커</div><div class="st-row-sub">$40 이하 강제매수 발동</div></div>
+        </div>
+        <div class="sw on" id="sw_circuit" onclick="swToggle('circuit',this)"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- ══ TOAST ══ -->
 <div class="twrap" id="tWrap"></div>
 
@@ -763,6 +906,7 @@ const S={
   filterQ:'',
   loanDlgOpen:false,
   notif:{trade:true,news:true,loan:true,warn:true,sys:true}, // 알림 설정
+  circuitBreaker:true, // NKX 서킷브레이커
   startRealTime:Date.now(),    // 실제 시작 시각
   newsLog:[],                  // 실제로 발행된 뉴스 [{news, realTime, simTime}]
   lastNewsRealTime:0,          // 마지막 뉴스 발행 실제시각
@@ -1157,60 +1301,6 @@ function simElapsedStr(sec){
 /* 가상 1일(86400 가상초)마다 뉴스 1개 */
 const NEWS_VIRT_INTERVAL=86_400;
 
-function tick(){
-  if(S.paused)return;
-  S.tickCount++;
-
-  // 실제 경과 시간 × 배속 = 가상 시간 증가
-  // 1배속이면 실제 시간과 동일하게 흐름
-  const nowMs=Date.now();
-  const realElapsedMs=_lastTickRealMs>0?(nowMs-_lastTickRealMs):50;
-  _lastTickRealMs=nowMs;
-  S.simSec+=(realElapsedMs/1000)*S.speed;
-
-  // 일반 종목 가격 업데이트 + 평균 변화율 계산
-  let sumPct=0,cnt=0;
-  STOCKS.forEach(s=>{
-    if(s.t==='NKX')return;
-    const prev=lastC(s.t);
-    const c=mkCandle(prev,s.v,S.simSec,s.t);
-    H[s.t].push(c);
-    if(H[s.t].length>3500)H[s.t].splice(0,500);
-    sumPct+=(c.c-prev)/prev;
-    cnt++;
-    if(S.priceTrend[s.t]){
-      S.priceTrend[s.t]*=0.90;
-      if(Math.abs(S.priceTrend[s.t])<0.00001)S.priceTrend[s.t]=0;
-    }
-  });
-
-  // NKX: 시장 평균 반대 × 10,000,000
-  const avgMkt=cnt>0?sumPct/cnt:0;
-  const nkxPrev=lastC('NKX');
-  const nkxChg=-avgMkt*10_000_000;
-  const nkxC=Math.max(nkxPrev*(1+nkxChg),1);
-  const sw=Math.abs(randn(0,0.0005));
-  H['NKX'].push({t:S.simSec,o:nkxPrev,h:Math.max(nkxPrev,nkxC)*(1+sw),l:Math.max(Math.min(nkxPrev,nkxC)*(1-sw),1),c:nkxC,v:10});
-  if(H['NKX'].length>3500)H['NKX'].splice(0,500);
-
-  // 이자 누적
-  accrueInterest();
-
-  // 가상 시간 기준 뉴스 발행 (가상 1일마다 1개)
-  const virtDays=Math.floor(S.simSec/NEWS_VIRT_INTERVAL);
-  if(virtDays>S.newsLog.length)publishNews();
-
-  // 렌더 스로틀
-  const re=S.speed>=100000?100:S.speed>=10000?50:S.speed>=1000?20:S.speed>=100?8:S.speed>=20?4:S.speed>=5?2:1;
-  if(S.tickCount%re===0){
-    renderAsset();renderStocks();renderPort();
-    if(S.tickCount%(re*3)===0)renderHist();
-    if(S.tickCount%(re*6)===0)updTape();
-  }
-  if(S.sel)updModalLive();
-  if(S.loanDlgOpen&&S.tickCount%5===0)renderLoanDlg();
-}
-
 /* ═══════ SPEED CONTROL ═══════ */
 function onSpeedSlider(v){
   const spd=sliderToSpeed(v);
@@ -1259,6 +1349,7 @@ function rafLoop(nowMs){
   setAssetTargets();     // 목표값 업데이트
   lerpDisp();            // 보간
   _flushAssetDOM();      // DOM 반영
+  updVirtElapsed();      // 가상 경과 부드럽게
   if(S.sel)updModalLive();
   // 무거운 렌더는 throttle
   _rafRenderAcc=((_rafRenderAcc||0)+frameMs);
@@ -1295,12 +1386,23 @@ function priceTick(){
     }
   });
 
-  // NKX
+  // NKX: 시장 평균 반대 × 10,000,000
   const avgMkt=cnt>0?sumPct/cnt:0;
   const nkxPrev=lastC('NKX');
-  const nkxC=Math.max(nkxPrev*(1-avgMkt*10_000_000),1);
+  const nkxChg=-avgMkt*10_000_000;
+  let nkxC=Math.max(nkxPrev*(1+nkxChg),1);
+
+  // $1000(USD) = 1,320,000원 이하면 서킷브레이커: 10만주 강제매수 → 반등
+  const NKX_FLOOR_KRW=1000*1320;
+  if(S.circuitBreaker&&nkxC<NKX_FLOOR_KRW){
+    const bounce=0.08+Math.random()*0.20;
+    nkxC=NKX_FLOOR_KRW*(1+bounce);
+    if(S.port&&S.port['NKX'])
+      toast('💀 NKX 서킷브레이커: 10만주 강제매수 발동!','inf','sys');
+  }
+
   const sw=Math.abs(randn(0,0.0003));
-  H['NKX'].push({t:S.simSec,o:nkxPrev,h:Math.max(nkxPrev,nkxC)*(1+sw),l:Math.max(Math.min(nkxPrev,nkxC)*(1-sw),1),c:nkxC,v:10});
+  H['NKX'].push({t:S.simSec,o:nkxPrev,h:Math.max(nkxPrev,nkxC)*(1+sw),l:Math.max(Math.min(nkxPrev,nkxC)*(1-sw),NKX_FLOOR_KRW*0.98),c:nkxC,v:nkxC<NKX_FLOOR_KRW?100000:10});
   if(H['NKX'].length>3500)H['NKX'].splice(0,500);
 
   // 이자 (10틱마다)
@@ -1519,7 +1621,7 @@ function updTape(){
 
 /* ═══════ MODAL ═══════ */
 function openModal(t){
-  S.sel=t;S.mode='buy';S.period='5m';S.ctype='line';
+  S.sel=t;S.mode='buy';S.period='5m';S.ctype=defaultChartType;
   document.getElementById('qInp').value=1;
   const s=STOCKS.find(x=>x.t===t);
   document.getElementById('mLogo').textContent=s.e;
@@ -2001,7 +2103,7 @@ function repayPartial(idx){
 function resetGame(){
   if(!confirm('초기화할까요? 모든 데이터가 삭제됩니다.'))return;
   S.cash=INIT_CASH;S.port={};S.hist=[];S.loans=[];S.totalInterestPaid=0;
-  S.newsLog=[];S.startRealTime=Date.now();S.lastNewsRealTime=0;S.simSec=0;S.tickCount=0;_lastTickRealMs=Date.now();_dispInited=false;
+  S.newsLog=[];S.startRealTime=Date.now();S.lastNewsRealTime=0;S.simSec=0;S.tickCount=0;_dispInited=false;
   STOCKS.forEach(s=>{S.priceTrend[s.t]=0;});
   refillNewsPool();
   renderAsset();renderPort();renderHist();renderNews();toast('🔄 초기화 완료','inf','sys');
@@ -2015,6 +2117,98 @@ function gotoId(id){document.getElementById(id).scrollIntoView({behavior:'smooth
 function toggleNotif(key,el){
   S.notif[key]=!S.notif[key];
   el.classList.toggle('on',S.notif[key]);
+}
+
+/* ═══════ SETTINGS SHEET ═══════ */
+// 레이아웃 섹션 정의 (id: DOM element id, label, icon)
+const LAYOUT_SECTIONS=[
+  {id:'portSec',   wrap:'plistEl',  label:'내 포트폴리오', icon:'📊'},
+  {id:'slistSec',  wrap:'slistEl',  label:'전체 종목',     icon:'📈'},
+  {id:'histSec',   wrap:'hlistEl',  label:'거래 내역',     icon:'📋'},
+];
+// 섹션 표시 상태
+const sectionVisible={portSec:true, slistSec:true, histSec:true};
+// 기본 차트 타입
+let defaultChartType='line';
+
+function openSettings(){
+  buildLayoutList();
+  // 스위치 상태 sync
+  ['trade','news','loan','warn','sys','circuit'].forEach(k=>{
+    const sw=document.getElementById(`sw_${k}`);
+    const val=k==='circuit'?S.circuitBreaker:S.notif[k];
+    if(sw)sw.classList.toggle('on',!!val);
+  });
+  document.getElementById('settingsDlg').classList.add('open');
+  document.body.style.overflow='hidden';
+}
+function closeSettings(){
+  document.getElementById('settingsDlg').classList.remove('open');
+  document.body.style.overflow='';
+}
+function handleStBg(e){if(e.target.id==='settingsDlg')closeSettings();}
+
+function swToggle(key,el){
+  el.classList.toggle('on');
+  const on=el.classList.contains('on');
+  if(key==='circuit'){S.circuitBreaker=on;return;}
+  S.notif[key]=on;
+}
+
+function buildLayoutList(){
+  const list=document.getElementById('layoutList');
+  list.innerHTML=LAYOUT_SECTIONS.map((sec,i)=>{
+    const vis=sectionVisible[sec.id]!==false;
+    return`<div class="layout-item${vis?'':' hidden-sec'}" data-sec="${sec.id}"
+      draggable="true" ondragstart="dragStart(event,${i})" ondragover="dragOver(event)" ondrop="dragDrop(event,${i})">
+      <span class="layout-drag-handle">⠿</span>
+      <span class="layout-label">${sec.icon} ${sec.label}</span>
+      <button class="layout-eye" onclick="toggleSection('${sec.id}',this)">${vis?'👁':'🙈'}</button>
+    </div>`;
+  }).join('');
+}
+
+let _dragIdx=null;
+function dragStart(e,i){_dragIdx=i;e.dataTransfer.effectAllowed='move';}
+function dragOver(e){e.preventDefault();e.currentTarget.classList.add('drag-over');}
+function dragDrop(e,targetIdx){
+  e.preventDefault();
+  e.currentTarget.classList.remove('drag-over');
+  if(_dragIdx===null||_dragIdx===targetIdx)return;
+  const arr=LAYOUT_SECTIONS;
+  const [moved]=arr.splice(_dragIdx,1);
+  arr.splice(targetIdx,0,moved);
+  _dragIdx=null;
+  applyLayoutOrder();
+  buildLayoutList();
+}
+
+function applyLayoutOrder(){
+  const page=document.querySelector('.page');
+  // 포트폴리오 섹션 헤더+리스트를 순서대로 재배치
+  LAYOUT_SECTIONS.forEach(sec=>{
+    const hdr=document.getElementById(sec.id);
+    const wrap=document.getElementById(sec.wrap);
+    if(hdr&&wrap){page.appendChild(hdr);page.appendChild(wrap);}
+  });
+}
+
+function toggleSection(secId,btn){
+  sectionVisible[secId]=!sectionVisible[secId];
+  const vis=sectionVisible[secId];
+  const hdr=document.getElementById(secId);
+  const sec=LAYOUT_SECTIONS.find(s=>s.id===secId);
+  const wrap=sec?document.getElementById(sec.wrap):null;
+  if(hdr)hdr.style.display=vis?'':'none';
+  if(wrap)wrap.style.display=vis?'':'none';
+  btn.textContent=vis?'👁':'🙈';
+  btn.closest('.layout-item').classList.toggle('hidden-sec',!vis);
+}
+
+function setDefaultChart(type,btn){
+  defaultChartType=type;
+  document.querySelectorAll('.st-chart-btn').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');
 }
 
 // toast type → notif key 매핑
@@ -2088,10 +2282,11 @@ function _flushAssetDOM(){
 }
 
 function updClock(){
-  // 시뮬레이션 현재 시각
-  document.getElementById('clkEl').textContent=simSecToStr(S.simSec).slice(0,18);
+  // 시뮬레이션 현재 시각 (topbar)
+  const clkEl=document.getElementById('clkEl');
+  if(clkEl)clkEl.textContent=simSecToStr(S.simSec).slice(0,18);
 
-  // 실제 경과
+  // 실제 경과 (setInterval 0.5s로만 — 초 단위라 충분)
   const realMs=Date.now()-S.startRealTime;
   const rd=Math.floor(realMs/86400000);
   const rh=Math.floor((realMs%86400000)/3600000);
@@ -2100,32 +2295,30 @@ function updClock(){
   const realStr=rd>0
     ?`D+${rd} ${String(rh).padStart(2,'0')}:${String(rm).padStart(2,'0')}:${String(rs).padStart(2,'0')}`
     :`${String(rh).padStart(2,'0')}:${String(rm).padStart(2,'0')}:${String(rs).padStart(2,'0')}`;
-
-  // 가상 경과 (simSec 누적)
-  const virtStr=simElapsedStr(S.simSec);
-
   const re=document.getElementById('realElapsedEl');
-  const ve=document.getElementById('virtElapsedEl');
   if(re)re.textContent=realStr;
-  if(ve)ve.textContent=virtStr;
+}
+
+/* 가상 경과 — rafLoop에서 매 프레임 호출 */
+function updVirtElapsed(){
+  const ve=document.getElementById('virtElapsedEl');
+  if(ve)ve.textContent=simElapsedStr(S.simSec);
 }
 
 /* ═══════ BOOT ═══════ */
 initH();
 refillNewsPool();
-S.simSec=0;           // 가상 시간: 0000년 00월 00일 00:00:00
+S.simSec=0;
 S.startRealTime=Date.now();
 S.lastNewsRealTime=0;
-_lastTickRealMs=Date.now();
 buildSpeedTicks();
 
 // 초기 렌더
 renderAsset();_renderStocksInner();renderPort();renderHist();renderNews();updTape();
 
-// 타이머 시작 (1×)
-S.tickTimer=setInterval(tick,2000);
+// RAF 메인루프 시작 (가격+시간+렌더 모두 여기서)
+requestAnimationFrame(rafLoop);
 setInterval(updClock,500);
-// 뉴스 "다음 뉴스까지" 카운트다운 갱신 (뉴스 없을 때)
 setInterval(()=>{if(!S.newsLog.length)renderNews();},5000);
 setInterval(()=>{if(S.sel)renderOB();},3000);
 </script>
